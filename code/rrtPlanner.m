@@ -1,4 +1,4 @@
-function[dataStore] = birrtPlanner(CreatePort,DistPort,TagPort,tagNum,maxTime)
+function[dataStore] = rrtPlanner(CreatePort,DistPort,TagPort,tagNum,maxTime)
 % backupBump: Drives robot forward at constant velocity until it bumps
 % into somthing. If a bump sensor is triggered, command the robot to back
 % up 0.25m and turn clockwise 30 degs, before continuing to drive forward
@@ -83,7 +83,7 @@ epsilon = 0.1;
 closeEnough = 0.1;
 gotopt = 1;
 reached = 0;
-alph = 20;
+alph = 2;
 %last is to stop robot when last waypoint is reached
 last = 0;
 
@@ -103,7 +103,7 @@ while toc < maxTime && last~=1
         end
         axis equal
         nowp = dataStore.truthPose(end,2:3);
-        [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,goalp,stepsize,radius);
+        [V,connect_mat,cost,path,pathpoints,expath,expoint] = buildRRT(map,limits,sampling_handle,nowp,goalp,stepsize,radius);
         
         d=plot(pathpoints(:,1),pathpoints(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1]);
         e=plot(nowp(1),nowp(2),'ko','MarkerFaceColor',[1 0 0]);
@@ -129,7 +129,7 @@ while toc < maxTime && last~=1
     end
     %run visitWaypoints
     [vout,wout,reached] = visitWaypoints(waypoints,gotopt,closeEnough,epsilon, alph, x, y, theta);
-    [cmdV,cmdW] = limitCmds(vout,wout,0.3,0.13);
+    [cmdV,cmdW] = limitCmds(vout,wout,0.1,0.13);
     
     if last==1
         %stop robot if last one reached
@@ -139,16 +139,14 @@ while toc < maxTime && last~=1
     
     SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW );
     
-    pause(0.01);
+    pause(0.1);
 end
 
 % set forward and angular velocity to zero (stop robot) before exiting the function
 SetFwdVelAngVelCreate(CreatePort, 0,0 );
 g = plot(dataStore.truthPose(:,2),dataStore.truthPose(:,3),'b');
-legend([a expath expoint expath2 expoint2 d e f g],'Map','Start Search Tree Edges',...
-    'Start Search Tree Nodes','Goal Search Tree Edges','Goal Search Tree Nodes',...
+legend([a expath expoint d e f g],'Map','Search Tree Edges','Search Tree Nodes',...
     'Final Solution Path','Starting Point','Goal Point','Actual Trajectory','Location','northeastoutside')
-title('birrtPlanner Search Tree, Solution Path and Robot Trajectory')
+title('rrtPlanner Search Tree, Solution Path and Robot Trajectory')
 xlabel('Global X')
 ylabel('Global Y')
-
