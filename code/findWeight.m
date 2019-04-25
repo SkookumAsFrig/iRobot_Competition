@@ -33,7 +33,7 @@ beacondata = zt(end-2:end);
 wt = zeros(length(depth),1);
 wtbeacon = zeros(m,1);
 for i=1:length(depth)
-    wt(i) = normpdf(zt(i),depth(i),sqrt(0.001));
+    wt(i) = normpdf(zt(i),depth(i),sqrt(0.1));
 end
 
 lowprob = 0.000001;
@@ -41,7 +41,8 @@ highprob = 1;
 
 for i=1:m
     if beacondata(1)==beaconmat(i,1) && canSee(i)==1%can see current beacon and beacon should be able to be seen
-        wtbeacon(i) = normpdf(beaconmat(i,2),coordinates(i,1),sqrt(2))*normpdf(beaconmat(i,3),coordinates(i,2),sqrt(2));
+        wtbeacon(i) = 10*normpdf(beaconmat(i,2),coordinates(i,1),sqrt(2))*normpdf(beaconmat(i,3),coordinates(i,2),sqrt(2));
+        disp(wtbeacon(i))
     elseif (beacondata(1)==beaconmat(i,1) && canSee(i)==0) || (beacondata(1)~=beaconmat(i,1) && canSee(i)==1)
         wtbeacon(i) = lowprob;
     else

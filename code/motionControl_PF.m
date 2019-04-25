@@ -57,8 +57,6 @@ dataStore = struct('truthPose', [],...
     'deadReck', [], ...
     'ekfMu', [], ...
     'ekfSigma', [],...
-    'GPS', [],...
-    'kttest', [],...
     'particles', [],...
     'debugparticles', []);
 
@@ -97,6 +95,7 @@ mapdata = mapstruct.map;
 beaconmat = mapstruct.beaconLoc;
 sensorOrigin = [0.13 0];
 angles = linspace(27*pi/180,-27*pi/180,9);
+spinsw = 0;
 
 [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
 
@@ -107,19 +106,14 @@ while toc < maxTime
     sigma = sqrt(0.001);
     [q,~] = size(dataStore.beacon);
     [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
-    dataStore.GPS = [dataStore.GPS;...
-        toc dataStore.truthPose(end,2:end) + normrnd(mu,sigma,1,3)];
     
     dvec = dataStore.odometry(end,2);
     phivec = dataStore.odometry(end,3);
     
     if initsw == 0
-        dataStore.beacon = [0,0,-1,0,0,0];
-        newstate = integrateOdom_onestep(dataStore.truthPose(1,2),...
-            dataStore.truthPose(1,3), dataStore.truthPose(1,4), 0, 0);
-        xt = newstate(1);
-        yt = newstate(2);
-        thetat = newstate(3);      
+        dataStore.beacon = [0,0,-1,0,0,0];   
+        
+        oriPose = dataStore.truthPose(1,2:4);
         
         initsw = 1;
         %% PF
@@ -131,14 +125,8 @@ while toc < maxTime
         dataStore.particles = [xpart ypart thepart wi];
         [a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
     else
-        newstate = integrateOdom_onestep(dataStore.deadReck(end,2),...
-            dataStore.deadReck(end,3), dataStore.deadReck(end,4), dvec, phivec);
-        xt = newstate(1);
-        yt = newstate(2);
-        thetat = newstate(3);
         
         ctrl = [dvec phivec];
-        %         zt = dataStore.GPS(end,2:end)';
         zt = [dataStore.rsdepth(end,3:end) dataStore.beacon(end,3:5)]';
         
         %% PF
@@ -159,7 +147,6 @@ while toc < maxTime
         dataStore.beacon = [dataStore.beacon; [0,0,-1,0,0,0]];
     end
     disp(dataStore.beacon(end,3));
-    dataStore.deadReck = [dataStore.deadReck; toc xt yt thetat];
     
     delete(a)
     delete(b)
@@ -179,6 +166,11 @@ while toc < maxTime
     % if overhead localization loses the robot for too long, stop it
     if noRobotCount >= 3
         SetFwdVelAngVelCreate(CreatePort, 0,0);
+    elseif spinsw<2
+        SetFwdVelAngVelCreate(CreatePort, cmdV2, cmdW2 );
+        if(dataStore.truthPose(end,4) - oriPose(3) > 1.5*pi)
+            spinsw = spinsw+1;
+        end
     elseif done==1 && wall==0 && rotate==1
         SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW );
         %go forward unless it hits something all around

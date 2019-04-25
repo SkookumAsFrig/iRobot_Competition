@@ -89,7 +89,7 @@ initsw = 0;
 dvec = 0;
 phivec = 0;
 
-numpart = 300;
+numpart = 500;
 
 map = 'compMap.mat';
 mapstruct = importdata(map);
