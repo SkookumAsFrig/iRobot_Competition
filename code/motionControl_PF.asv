@@ -89,7 +89,7 @@ initsw = 0;
 dvec = 0;
 phivec = 0;
 
-numpart = 300;
+numpart = 1000;
 
 map = 'compMap.mat';
 mapstruct = importdata(map);
@@ -98,15 +98,15 @@ beaconmat = mapstruct.beaconLoc;
 sensorOrigin = [0.13 0];
 angles = linspace(27*pi/180,-27*pi/180,9);
 
-[noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
-
 tic
 while toc < maxTime
     % READ & STORE SENSOR DATA
     mu = 0;
     sigma = sqrt(0.001);
-    [q,~] = size(dataStore.beacon);
+    
+
     [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
+    
     dataStore.GPS = [dataStore.GPS;...
         toc dataStore.truthPose(end,2:end) + normrnd(mu,sigma,1,3)];
     
@@ -114,7 +114,6 @@ while toc < maxTime
     phivec = dataStore.odometry(end,3);
     
     if initsw == 0
-        dataStore.beacon = [0,0,-1,0,0,0];
         newstate = integrateOdom_onestep(dataStore.truthPose(1,2),...
             dataStore.truthPose(1,3), dataStore.truthPose(1,4), 0, 0);
         xt = newstate(1);
@@ -154,11 +153,7 @@ while toc < maxTime
         dataStore.debugparticles = cat(3,dataStore.debugparticles,Mt);
         
     end
-    [p,~] = size(dataStore.beacon);
-    if p==q
-        dataStore.beacon = [dataStore.beacon; [0,0,-1,0,0,0]];
-    end
-    disp(dataStore.beacon(end,3));
+    
     dataStore.deadReck = [dataStore.deadReck; toc xt yt thetat];
     
     delete(a)

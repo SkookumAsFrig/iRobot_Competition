@@ -173,71 +173,15 @@ while toc < maxTime
     [cmdV,cmdW] = limitCmds(fwdVel,angVel,0.49,0.13);
     % Set rotate velocity
     fwdVel2 = 0;
-    angVel2 = -0.2;
+    angVel2 = -0.1;
     [cmdV2,cmdW2] = limitCmds(fwdVel2,angVel2,0.49,0.13);
     
     % if overhead localization loses the robot for too long, stop it
     if noRobotCount >= 3
-        SetFwdVelAngVelCreate(CreatePort, 0,0);
-    elseif done==1 && wall==0 && rotate==1
-        SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW );
-        %go forward unless it hits something all around
-        [BumpRight,BumpLeft,WheDropRight,WheDropLeft,WheDropCaster,BumpFront] = BumpsWheelDropsSensorsRoomba(CreatePort);
-        if BumpFront || BumpRight || BumpLeft
-            %go into back up state
-            wall = 1;
-            done = 0;
-            rotate = 0;
-        end
-    elseif done==0 && wall==1 && rotate==0
-        if distanceticker == 0
-            %oneshot to set back up distance reference
-            Lastpoint = dataStore.truthPose(end,2:3);
-            distanceticker = 1;
-        else
-            %calculate distance by sqrt(deltax^2+deltay^2)
-            Distanceout = norm(dataStore.truthPose(end,2:3) - Lastpoint);
-        end
-        
-        if Distanceout < 0.25
-            %back up if not there yet
-            SetFwdVelAngVelCreate(CreatePort, -cmdV, cmdW );
-        else
-            %if reached, stop and go into rotate state
-            SetFwdVelAngVelCreate(CreatePort, 0, 0 );
-            Distanceout = 0;
-            distanceticker = 0;
-            done = 1;
-            wrap = 0;
-            Lastangle = dataStore.truthPose(end,4);
-            %record angle for turn reference
-        end
-    elseif done==1 && wall==1 && rotate==0
-        test = dataStore.truthPose(end,4) - Lastangle;
-        %test for wrap around
-        if abs(test)>pi
-            %pi is arbitrary threshold, tbh anything over pi/6 works
-            wrap = 2*pi;
-        end
-        Angleout = dataStore.truthPose(end,4) - Lastangle - wrap;
-        %this algo fixes wraparound issues
-        
-        if abs(Angleout) < pi/6
-            %keep turning if not there yet
-            SetFwdVelAngVelCreate(CreatePort, cmdV2, cmdW2 );
-        else
-            %stop if reached, go into forward state and reset all temp
-            %variables
-            SetFwdVelAngVelCreate(CreatePort, 0, 0 );
-            Angleout = 0;
-            rotateticker = 0;
-            rotate = 1;
-            wall = 0;
-            wrap = 0;
-        end
+        SetFwdVelAngVelCreate(CreatePort, cmdV2,cmdW2);
     end
     
-    pause(0.1);
+    pause(0.01);
 end
 
 % set forward and angular velocity to zero (stop robot) before exiting the function

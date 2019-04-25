@@ -1,4 +1,4 @@
-function weight = findWeight(robotPose,map,sensorOrigin,angles,zt)
+function weight = findWeight(robotPose,map,sensorOrigin,angles,zt,beaconmat)
 % RANGEPREDICT: predict the range measurements for a robot operating
 % in a known map.
 %
@@ -24,14 +24,32 @@ function weight = findWeight(robotPose,map,sensorOrigin,angles,zt)
 %   Autonomous Mobile Robots
 %   Homework 4
 %   SHI, KOWIN
-
+[m,~] = size(beaconmat);
+[n,~] = size(map);
 range = rangePredict(robotPose,map,sensorOrigin,angles);
 depth = depthPredict(angles, range);
+[canSee, coordinates] = beaconPredict(robotPose,sensorOrigin,map,n,beaconmat,m);
+beacondata = zt(end-2:end);
 wt = zeros(length(depth),1);
+wtbeacon = zeros(m,1);
 for i=1:length(depth)
     wt(i) = normpdf(zt(i),depth(i),sqrt(0.001));
 end
 
-weight = prod(wt);
+lowprob = 0.000001;
+highprob = 1;
+
+for i=1:m
+    if beacondata(1)==beaconmat(i,1) && canSee(i)==1%can see current beacon and beacon should be able to be seen
+        wtbeacon(i) = normpdf(beaconmat(i,2),coordinates(i,1),sqrt(2))*normpdf(beaconmat(i,3),coordinates(i,2),sqrt(2));
+    elseif (beacondata(1)==beaconmat(i,1) && canSee(i)==0) || (beacondata(1)~=beaconmat(i,1) && canSee(i)==1)
+        wtbeacon(i) = lowprob;
+    else
+        wtbeacon(i) = highprob;
+    end
+end
+
+
+weight = prod([wt; wtbeacon]);
 
 end

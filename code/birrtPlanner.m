@@ -62,7 +62,7 @@ dataStore = struct('truthPose', [],...
 % safety reasons.
 noRobotCount = 0;
 
-goalp = [3 3];
+goalp = [2.5 1];
 map = 'compMap.mat';
 mapstruct = importdata(map);
 mapdata = mapstruct.map;
