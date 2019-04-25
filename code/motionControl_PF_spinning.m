@@ -173,15 +173,15 @@ while toc < maxTime
     [cmdV,cmdW] = limitCmds(fwdVel,angVel,0.49,0.13);
     % Set rotate velocity
     fwdVel2 = 0;
-    angVel2 = -0.1;
+    angVel2 = -0.2;
     [cmdV2,cmdW2] = limitCmds(fwdVel2,angVel2,0.49,0.13);
-    
+    SetFwdVelAngVelCreate(CreatePort, cmdV2, cmdW2);
     % if overhead localization loses the robot for too long, stop it
     if noRobotCount >= 3
-        SetFwdVelAngVelCreate(CreatePort, cmdV2,cmdW2);
+        SetFwdVelAngVelCreate(CreatePort, 0, 0);
     end
     
-    pause(0.01);
+    pause(0.1);
 end
 
 % set forward and angular velocity to zero (stop robot) before exiting the function
