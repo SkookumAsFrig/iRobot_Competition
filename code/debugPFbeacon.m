@@ -19,17 +19,16 @@ yrange = (maxY-minY);
 
 figure
 initsw = 0;
-numpart = 200;
+numpart = 50;
 sensorOrigin = [0.13 0];
 angles = linspace(27*pi/180,-27*pi/180,9);
 
 for i=1:length(dataStore.truthPose(:,1))
+    pause(0.00001)
     clf
     disp(i)
     hold on
     axis equal
-    %plot(dataStore.truthPose(i,2),dataStore.truthPose(i,3),'rp','MarkerSize',20)
-    drawparticlestar(dataStore.truthPose(i,2),dataStore.truthPose(i,3),dataStore.truthPose(i,4));
     for j=1:l
         plot([mapdata(j,1) mapdata(j,3)],[mapdata(j,2) mapdata(j,4)],'LineWidth',2,'Color','k','HandleVisibility','off')
     end
@@ -72,4 +71,6 @@ for i=1:length(dataStore.truthPose(:,1))
     for k=1:numpart
         drawparticle(dataStore.particles(k,1,i),mean(dataStore.particles(k,2,i)),mean(dataStore.particles(k,3,i)));
     end
+    %plot(dataStore.truthPose(i,2),dataStore.truthPose(i,3),'rp','MarkerSize',20)
+    drawparticlestar(dataStore.truthPose(i,2),dataStore.truthPose(i,3),dataStore.truthPose(i,4));
 end

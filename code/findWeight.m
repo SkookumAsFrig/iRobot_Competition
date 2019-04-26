@@ -29,7 +29,7 @@ function weight = findWeight(robotPose,map,sensorOrigin,angles,zt,beaconmat)
 range = rangePredict(robotPose,map,sensorOrigin,angles);
 depth = depthPredict(angles, range);
 
-[g, j] = drawparticlestar_green(robotPose(1),robotPose(2),robotPose(3));
+%[g, j] = drawparticlestar_green(robotPose(1),robotPose(2),robotPose(3));
 
 [canSee, coordinates] = beaconPredict(robotPose,sensorOrigin,map,n,beaconmat,m);
 
@@ -40,13 +40,13 @@ for i=1:length(depth)
     wt(i) = normpdf(zt(i),depth(i),sqrt(0.1));
 end
 
-lowprob = 0.000001;
+lowprob = 0.0000001;
 highprob = 1;
 
 for i=1:m
     if beacondata(1)==beaconmat(i,1) && canSee(i)==1%can see current beacon and beacon should be able to be seen
-        wtbeacon(i) = 1000*normpdf(beaconmat(i,2),coordinates(i,1),sqrt(2))*normpdf(beaconmat(i,3),coordinates(i,2),sqrt(2));
-        disp(wtbeacon(i))
+        wtbeacon(i) = 100*normpdf(beaconmat(i,2),coordinates(i,1),sqrt(2))*normpdf(beaconmat(i,3),coordinates(i,2),sqrt(2));
+        %disp(wtbeacon(i))
     elseif (beacondata(1)==beaconmat(i,1) && canSee(i)==0) || (beacondata(1)~=beaconmat(i,1) && canSee(i)==1)
         wtbeacon(i) = lowprob;
     else
@@ -56,7 +56,7 @@ end
 
 weight = prod([wt; wtbeacon]);
 
-delete(g)
-delete(j)
+% delete(g)
+% delete(j)
 
 end

@@ -125,9 +125,9 @@ while toc < maxTime
         initsw = 1;
         %% PF
         
-%         xpart = -5*rand(numpart,1);
-%         ypart = 10*rand(numpart,1)-5;
-%         thepart = 0.4*rand(numpart,1)-0.2;
+        %         xpart = -5*rand(numpart,1);
+        %         ypart = 10*rand(numpart,1)-5;
+        %         thepart = 0.4*rand(numpart,1)-0.2;
         
         xpart = xrange*rand(numpart,1)+minX;
         ypart = yrange*rand(numpart,1)+minY;
@@ -135,8 +135,8 @@ while toc < maxTime
         
         wi = ones(numpart,1)/numpart;
         dataStore.particles = [xpart ypart thepart wi];
-        %[a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
-        c = plot(dataStore.particles(:,1,end), dataStore.particles(:,2,end), 'ko');
+        [a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
+        %c = plot(dataStore.particles(:,1,end), dataStore.particles(:,2,end), 'ko');
     else
         
         ctrl = [dvec phivec];
@@ -162,11 +162,11 @@ while toc < maxTime
     end
     disp(dataStore.beacon(end,3));
     
-    %     delete(a)
-    %     delete(b)
-    delete(c)
-    %[a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
-    c = plot(dataStore.particles(:,1,end), dataStore.particles(:,2,end), 'ko');
+    delete(a)
+    delete(b)
+%    delete(c)
+    [a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
+    %c = plot(dataStore.particles(:,1,end), dataStore.particles(:,2,end), 'ko');
     
     % CONTROL FUNCTION (send robot commands)
     

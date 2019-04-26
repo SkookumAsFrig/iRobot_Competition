@@ -28,8 +28,15 @@ function [a, b] = drawparticlestar(x,y,theta)
 a = plot(x,y,'kp','MarkerSize',15,'MarkerFaceColor','k');
 hold on
 ptrlength = 0.5;
+FOVlength = 5;
 endptx = x+ptrlength*cos(theta);
 endpty = y+ptrlength*sin(theta);
 b = plot([x endptx],[y endpty],'k','LineWidth',2);
+endptx = x+FOVlength*cos(theta+0.436);
+endpty = y+FOVlength*sin(theta+0.436);
+plot([x endptx],[y endpty],'b','LineWidth',1);
+endptx = x+FOVlength*cos(theta-0.436);
+endpty = y+FOVlength*sin(theta-0.436);
+plot([x endptx],[y endpty],'b','LineWidth',1);
 
 end

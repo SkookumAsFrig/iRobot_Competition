@@ -5,7 +5,7 @@ xyG = robot2global([Pose(1) Pose(2) Pose(3)],sensorOrigin);
 xt = xyG(1);
 yt = xyG(2);
 thetat = Pose(3);
-anglimit = 45;
+anglimit = 25;
 
 canSee = zeros(beaconNum,1);
 coordinates = zeros(beaconNum,2);
