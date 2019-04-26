@@ -53,7 +53,8 @@ dataStore = struct('truthPose', [],...
     'odometry', [], ...
     'rsdepth', [], ...
     'bump', [], ...
-    'beacon', []);
+    'beacon', [], ...
+    'timebeacon', []);
 
 
 % Variable used to keep track of whether the overhead localization "lost"
@@ -75,7 +76,7 @@ limits = [xmin ymin xmax ymax];
 %sampling_handle = @(limits,lastind) lowdisp_resample(limits,lastind);
 sampling_handle = @(limits) uniformresample(limits);
 radius = 0.3;
-stepsize = 0.5;
+stepsize = 0.2;
 oneshot = 0;
 
 %constants to initialize
@@ -89,13 +90,21 @@ last = 0;
 
 tic
 while toc < maxTime && last~=1
-    
+    [q,~] = size(dataStore.beacon);
     % READ & STORE SENSOR DATA
     [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
     
     % CONTROL FUNCTION (send robot commands)
     
+    [p,~] = size(dataStore.beacon);
+    if p==q
+        dataStore.timebeacon = [dataStore.timebeacon; [0,0,-1,0,0,0]];
+    else
+        dataStore.timebeacon = [dataStore.timebeacon; dataStore.beacon(end,:)];
+    end
+    
     if oneshot==0
+        dataStore.timebeacon = [0,0,-1,0,0,0];
         figure
         hold on
         for j=1:l

@@ -25,7 +25,7 @@ function newstate = integrateOdom_onestep_wnoise(xi, yi, thetai, d, phi)
 %   Autonomous Mobile Robots
 %   Homework #2
 
-noise = normrnd(0,sqrt(0.05),3,1);
+noise = [normrnd(0,sqrt(0.1),2,1); normrnd(0,sqrt(0.01))];
 
 % computation
 %compute next timestep

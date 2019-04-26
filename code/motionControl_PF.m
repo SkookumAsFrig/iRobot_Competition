@@ -102,8 +102,7 @@ spinsw = 0;
 tic
 while toc < maxTime
     % READ & STORE SENSOR DATA
-    mu = 0;
-    sigma = sqrt(0.001);
+    
     [q,~] = size(dataStore.beacon);
     [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
     
@@ -172,7 +171,8 @@ while toc < maxTime
             spinsw = spinsw+1;
         end
     elseif done==1 && wall==0 && rotate==1
-        SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW );
+        SetFwdVelAng
+        VelCreate(CreatePort, cmdV, cmdW );
         %go forward unless it hits something all around
         [BumpRight,BumpLeft,WheDropRight,WheDropLeft,WheDropCaster,BumpFront] = BumpsWheelDropsSensorsRoomba(CreatePort);
         if BumpFront || BumpRight || BumpLeft

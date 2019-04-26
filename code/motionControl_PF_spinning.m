@@ -89,7 +89,7 @@ initsw = 0;
 dvec = 0;
 phivec = 0;
 
-numpart = 500;
+numpart = 200;
 
 map = 'compMap.mat';
 mapstruct = importdata(map);
@@ -97,6 +97,14 @@ mapdata = mapstruct.map;
 beaconmat = mapstruct.beaconLoc;
 sensorOrigin = [0.13 0];
 angles = linspace(27*pi/180,-27*pi/180,9);
+
+maxX = max([max(mapdata(:,1)) max(mapdata(:,3))]);
+maxY = max([max(mapdata(:,2)) max(mapdata(:,4))]);
+minX = min([min(mapdata(:,1)) min(mapdata(:,3))]);
+minY = min([min(mapdata(:,2)) min(mapdata(:,4))]);
+
+xrange = (maxX-minX);
+yrange = (maxY-minY);
 
 [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
 
@@ -107,35 +115,29 @@ while toc < maxTime
     sigma = sqrt(0.001);
     [q,~] = size(dataStore.beacon);
     [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
-    dataStore.GPS = [dataStore.GPS;...
-        toc dataStore.truthPose(end,2:end) + normrnd(mu,sigma,1,3)];
     
     dvec = dataStore.odometry(end,2);
     phivec = dataStore.odometry(end,3);
     
     if initsw == 0
         dataStore.beacon = [0,0,-1,0,0,0];
-        newstate = integrateOdom_onestep(dataStore.truthPose(1,2),...
-            dataStore.truthPose(1,3), dataStore.truthPose(1,4), 0, 0);
-        xt = newstate(1);
-        yt = newstate(2);
-        thetat = newstate(3);      
         
         initsw = 1;
         %% PF
         
-        xpart = -5*rand(numpart,1);
-        ypart = 10*rand(numpart,1)-5;
-        thepart = 0.4*rand(numpart,1)-0.2;
+%         xpart = -5*rand(numpart,1);
+%         ypart = 10*rand(numpart,1)-5;
+%         thepart = 0.4*rand(numpart,1)-0.2;
+        
+        xpart = xrange*rand(numpart,1)+minX;
+        ypart = yrange*rand(numpart,1)+minY;
+        thepart = 2*pi*rand(numpart,1);
+        
         wi = ones(numpart,1)/numpart;
         dataStore.particles = [xpart ypart thepart wi];
-        [a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
+        %[a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
+        c = plot(dataStore.particles(:,1,end), dataStore.particles(:,2,end), 'ko');
     else
-        newstate = integrateOdom_onestep(dataStore.deadReck(end,2),...
-            dataStore.deadReck(end,3), dataStore.deadReck(end,4), dvec, phivec);
-        xt = newstate(1);
-        yt = newstate(2);
-        thetat = newstate(3);
         
         ctrl = [dvec phivec];
         %         zt = dataStore.GPS(end,2:end)';
@@ -159,11 +161,12 @@ while toc < maxTime
         dataStore.beacon = [dataStore.beacon; [0,0,-1,0,0,0]];
     end
     disp(dataStore.beacon(end,3));
-    dataStore.deadReck = [dataStore.deadReck; toc xt yt thetat];
     
-    delete(a)
-    delete(b)
-    [a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
+    %     delete(a)
+    %     delete(b)
+    delete(c)
+    %[a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
+    c = plot(dataStore.particles(:,1,end), dataStore.particles(:,2,end), 'ko');
     
     % CONTROL FUNCTION (send robot commands)
     
