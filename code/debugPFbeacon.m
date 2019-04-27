@@ -19,14 +19,15 @@ yrange = (maxY-minY);
 
 figure
 initsw = 0;
-numpart = 200;
+numpart = 250;
 sensorOrigin = [0.13 0];
 angles = linspace(27*pi/180,-27*pi/180,9);
 
 deadreck = dataStore.truthPose(1,2:4);
 
+filename = 'testAnimated_fixed.gif';
+
 for i=1:length(dataStore.truthPose(:,1))
-    pause(0.1)
     clf
     disp(i)
     hold on
@@ -84,4 +85,18 @@ for i=1:length(dataStore.truthPose(:,1))
     %plot(dataStore.truthPose(i,2),dataStore.truthPose(i,3),'rp','MarkerSize',20)
     drawparticlestar(dataStore.truthPose(i,2),dataStore.truthPose(i,3),dataStore.truthPose(i,4));
     drawparticlestar_green(deadreck(i,1),deadreck(i,2),deadreck(i,3));
+    title(['Time is ',num2str(i)])
+    ax = gca;
+    ax.Units = 'pixels';
+    pos = ax.Position;
+    ti = ax.TightInset;
+    rect = [-ti(1), -ti(2), 1.05*(pos(3)+ti(1)+ti(3)), pos(4)+ti(2)+ti(4)];
+    F = getframe(ax,rect);
+    [A,map] = rgb2ind(frame2im(F),256);
+    
+    if i == 1
+        imwrite(A,map,filename,'gif','LoopCount',Inf,'DelayTime',0.1);
+    else
+        imwrite(A,map,filename,'gif','WriteMode','append','DelayTime',0.1);
+    end
 end

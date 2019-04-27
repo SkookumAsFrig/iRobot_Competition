@@ -43,7 +43,7 @@ end
 
 lowprob = 0.00000001;
 highprob = 1;
-beacondistW = sqrt(0.1);
+beacondistW = sqrt(0.01);
 bclabels = beacondata(1:3:end);
 
 for i=1:m
