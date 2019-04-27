@@ -19,7 +19,7 @@ yrange = (maxY-minY);
 
 figure
 initsw = 0;
-numpart = 200;
+numpart = 500;
 sensorOrigin = [0.13 0];
 angles = linspace(27*pi/180,-27*pi/180,9);
 
@@ -47,7 +47,7 @@ for i=1:length(dataStore.truthPose(:,1))
     thetai = deadreck(i,3);
     
     newstate = integrateOdom_onestep(xi, yi, thetai, dvec, phivec);
-    deadreck = [deadreck; newstate'];
+    deadreck = [deadreck; newstate];
     
     if initsw == 0
         oriPose = dataStore.truthPose(1,2:4);
@@ -64,7 +64,7 @@ for i=1:length(dataStore.truthPose(:,1))
     else
         
         ctrl = [dvec phivec];
-        zt = [dataStore.rsdepth(i,3:end) dataStore.timebeacon(i,:)]';
+        zt = [dataStore.rsdepth(i,3:end) dataStore.beacon(i,3:5)]';
         
         %% PF
         M_init = dataStore.particles(:,:,end);
@@ -83,5 +83,4 @@ for i=1:length(dataStore.truthPose(:,1))
     end
     %plot(dataStore.truthPose(i,2),dataStore.truthPose(i,3),'rp','MarkerSize',20)
     drawparticlestar(dataStore.truthPose(i,2),dataStore.truthPose(i,3),dataStore.truthPose(i,4));
-    drawparticlestar_green(deadreck(i,1),deadreck(i,2),deadreck(i,3));
 end

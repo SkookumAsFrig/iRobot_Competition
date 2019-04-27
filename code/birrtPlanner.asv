@@ -87,7 +87,7 @@ reached = 0;
 alph = 20;
 %last is to stop robot when last waypoint is reached
 last = 0;
-[beaconsize,~] = size(mapstruct.beaconLoc);
+%[beaconsize,~] = size(mapstruct.beaconLoc);
 
 tic
 while toc < maxTime && last~=1
@@ -99,12 +99,11 @@ while toc < maxTime && last~=1
     
     [p,~] = size(dataStore.beacon);
     if p==q
-        dataStore.timebeacon = [dataStore.timebeacon; repmat([-1,0,0],1,beaconsize)];
+        dataStore.timebeacon(end+1,:) = [0,0,-1,0,0,0];
         disp("cannot see beacon")
     else
         newpsize = p-q-1;
-        newdata = reshape(dataStore.beacon(end-newpsize:end,3:5)',1,[]);
-        newdata = padarray(newdata,[0 3*beaconsize-length(newdata)],-1,'post');
+        newdata = reshape(dataStore.beacon(end-newpsize:end,:)',1,[]);
         dataStore.timebeacon = [dataStore.timebeacon; newdata];
         disp("I see beacon!")
     end
