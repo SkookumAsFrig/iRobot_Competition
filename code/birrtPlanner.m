@@ -63,8 +63,12 @@ dataStore = struct('truthPose', [],...
 % safety reasons.
 noRobotCount = 0;
 
-goalp = [2.5 1];
-map = 'compMap.mat';
+%goalp = [2.5 1];
+%map = 'compMap.mat';
+
+goalp = [3 3];
+map = 'compMap_big.mat';
+
 mapstruct = importdata(map);
 mapdata = mapstruct.map;
 [l,~] = size(mapdata);
@@ -75,7 +79,7 @@ ymax = max(max([mapdata(:,2) mapdata(:,4)]));
 limits = [xmin ymin xmax ymax];
 %sampling_handle = @(limits,lastind) lowdisp_resample(limits,lastind);
 sampling_handle = @(limits) uniformresample(limits);
-radius = 0.3;
+radius = 0.2;
 stepsize = 0.2;
 oneshot = 0;
 

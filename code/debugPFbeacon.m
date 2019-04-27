@@ -2,8 +2,11 @@ clc
 clear all
 close all
 
-load('RRT_testrun.mat')
-map = 'compMap.mat';
+load('biRRT_bigtestrun.mat')
+map = 'compMap_big.mat';
+
+% load('RRT_testrun.mat')
+% map = 'compMap.mat';
 mapstruct = importdata(map);
 beaconmat = mapstruct.beaconLoc;
 [o,~] = size(beaconmat);
@@ -79,9 +82,11 @@ for i=1:length(dataStore.truthPose(:,1))
         dataStore.particles = cat(3,dataStore.particles,M_final);
         
     end
-    for k=1:3:numpart
-        drawparticle(dataStore.particles(k,1,i),mean(dataStore.particles(k,2,i)),mean(dataStore.particles(k,3,i)));
-    end
+%     for k=1:3:numpart
+%         drawparticle(dataStore.particles(k,1,i),dataStore.particles(k,2,i),dataStore.particles(k,3,i));
+%     end
+    drawparticlestar_red(mean(dataStore.particles(:,1,i)),mean(dataStore.particles(:,2,i)),mean(dataStore.particles(:,3,i)));
+    
     %plot(dataStore.truthPose(i,2),dataStore.truthPose(i,3),'rp','MarkerSize',20)
     drawparticlestar(dataStore.truthPose(i,2),dataStore.truthPose(i,3),dataStore.truthPose(i,4));
     drawparticlestar_green(deadreck(i,1),deadreck(i,2),deadreck(i,3));
