@@ -30,6 +30,8 @@ deadreck = dataStore.truthPose(1,2:4);
 
 filename = 'testAnimated_fixed.gif';
 
+seeBeacInd = 1;
+
 for i=1:length(dataStore.truthPose(:,1))
     clf
     disp(i)
@@ -46,9 +48,21 @@ for i=1:length(dataStore.truthPose(:,1))
     dvec = dataStore.odometry(i,2);
     phivec = dataStore.odometry(i,3);
     
-    xi = deadreck(i,1);
-    yi = deadreck(i,2);
-    thetai = deadreck(i,3);
+    if dataStore.timebeacon(i,1)~=-1
+        seeBeacInd = seeBeacInd+1;
+    else
+        seeBeacInd = 1;
+    end
+    
+    if seeBeacInd>7
+        xi = mean(dataStore.particles(:,1,i-1));
+        yi = mean(dataStore.particles(:,2,i-1));
+        thetai = mean(dataStore.particles(:,3,i-1));
+    else
+        xi = deadreck(i,1);
+        yi = deadreck(i,2);
+        thetai = deadreck(i,3);
+    end
     
     newstate = integrateOdom_onestep(xi, yi, thetai, dvec, phivec);
     deadreck = [deadreck; newstate'];
@@ -82,9 +96,13 @@ for i=1:length(dataStore.truthPose(:,1))
         dataStore.particles = cat(3,dataStore.particles,M_final);
         
     end
-%     for k=1:3:numpart
-%         drawparticle(dataStore.particles(k,1,i),dataStore.particles(k,2,i),dataStore.particles(k,3,i));
-%     end
+    
+    plot(dataStore.truthPose(1:i,2),dataStore.truthPose(1:i,3),'b')
+    plot(deadreck(1:i,1),deadreck(1:i,2),'g')
+    
+    %     for k=1:3:numpart
+    %         drawparticle(dataStore.particles(k,1,i),dataStore.particles(k,2,i),dataStore.particles(k,3,i));
+    %     end
     drawparticlestar_red(mean(dataStore.particles(:,1,i)),mean(dataStore.particles(:,2,i)),mean(dataStore.particles(:,3,i)));
     
     %plot(dataStore.truthPose(i,2),dataStore.truthPose(i,3),'rp','MarkerSize',20)

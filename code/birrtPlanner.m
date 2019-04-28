@@ -148,7 +148,7 @@ while toc < maxTime && last~=1
     end
     %run visitWaypoints
     [vout,wout,reached] = visitWaypoints(waypoints,gotopt,closeEnough,epsilon, alph, x, y, theta);
-    [cmdV,cmdW] = limitCmds(vout,wout,0.3,0.13);
+    [cmdV,cmdW] = limitCmds(vout,wout,0.2,0.05);
     
     if last==1
         %stop robot if last one reached
