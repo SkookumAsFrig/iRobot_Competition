@@ -100,9 +100,9 @@ for i=1:length(dataStore.truthPose(:,1))
         
     end
     
-    %     for k=1:3:numpart
-    %         drawparticle(dataStore.particles(k,1,i),dataStore.particles(k,2,i),dataStore.particles(k,3,i));
-    %     end
+    for k=1:3:numpart
+        drawparticle(dataStore.particles(k,1,i),dataStore.particles(k,2,i),dataStore.particles(k,3,i));
+    end
     
     xpartmean = mean(dataStore.particles(:,1,i));
     ypartmean = mean(dataStore.particles(:,2,i));
@@ -113,7 +113,7 @@ for i=1:length(dataStore.truthPose(:,1))
     plot(deadreck(1:i,1),deadreck(1:i,2),'g')
     %plot(partTraj(:,1),partTraj(:,2),'r')
     
-    drawparticlestar_red(xpartmean,ypartmean,tpartmean);
+    %drawparticlestar_red(xpartmean,ypartmean,tpartmean);
     
     %plot(dataStore.truthPose(i,2),dataStore.truthPose(i,3),'rp','MarkerSize',20)
     drawparticlestar(dataStore.truthPose(i,2),dataStore.truthPose(i,3),dataStore.truthPose(i,4));
