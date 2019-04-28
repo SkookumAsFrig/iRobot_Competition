@@ -1,5 +1,10 @@
-function[dataStore] = finalCompetition(CreatePort,DistPort,TagPort,tagNum,maxTime)
-%   dataStore = finalCompetition(CreatePort,DistPort,TagPort,tagNum,maxTime) 
+function[dataStore] = motionControl_PF(CreatePort,DistPort,TagPort,tagNum,maxTime)
+% backupBump: Drives robot forward at constant velocity until it bumps
+% into somthing. If a bump sensor is triggered, command the robot to back
+% up 0.25m and turn clockwise 30 degs, before continuing to drive forward
+% again. Saves a datalog.
+%
+%   dataStore = backupBump(CreatePort,DistPort,TagPort,tagNum,maxTime) runs
 %
 %   INPUTStype
 %       CreatePort  Create port object (get from running RoombaInit)
@@ -10,6 +15,10 @@ function[dataStore] = finalCompetition(CreatePort,DistPort,TagPort,tagNum,maxTim
 %
 %   OUTPUTS
 %       dataStore   struct containing logged data
+
+%
+%   NOTE: Assume differential-drive robot whose wheels turn at a constant
+%         rate between sensor readings.
 %
 %   Cornell University
 %   MAE 5180: Autonomous Mobile Robots
@@ -34,6 +43,7 @@ elseif nargin < 5
     maxTime = 500;
 end
 
+
 % declare dataStore as a global variable so it can be accessed from the
 % workspace even if the program is stopped
 global dataStore;
@@ -44,7 +54,11 @@ dataStore = struct('truthPose', [],...
     'rsdepth', [], ...
     'bump', [], ...
     'beacon', [], ...
-    'timebeacon', []);
+    'deadReck', [], ...
+    'ekfMu', [], ...
+    'ekfSigma', [],...
+    'particles', [],...
+    'debugparticles', []);
 
 
 % Variable used to keep track of whether the overhead localization "lost"
@@ -73,92 +87,69 @@ initsw = 0;
 dvec = 0;
 phivec = 0;
 
+numpart = 300;
+
 map = 'compMap.mat';
 mapstruct = importdata(map);
 mapdata = mapstruct.map;
+beaconmat = mapstruct.beaconLoc;
 sensorOrigin = [0.13 0];
-angles = linspace(-27*pi/180,27*pi/180,9);
+angles = linspace(27*pi/180,-27*pi/180,9);
+spinsw = 0;
+
+[noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
 
 tic
 while toc < maxTime
-    
     % READ & STORE SENSOR DATA
-    mu = 0;
-    sigma = sqrt(0.01);
-    [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
     
-    dataStore.GPS = [dataStore.GPS;...
-        toc dataStore.truthPose(end,2:end) + normrnd(mu,sigma,1,3)];
+    [q,~] = size(dataStore.beacon);
+    [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
     
     dvec = dataStore.odometry(end,2);
     phivec = dataStore.odometry(end,3);
     
-    % First Round
     if initsw == 0
-        newstate = integrateOdom_onestep(dataStore.truthPose(1,2),...
-            dataStore.truthPose(1,3), dataStore.truthPose(1,4), 0, 0);
-        xt = newstate(1);
-        yt = newstate(2);
-        thetat = newstate(3);
-        dataStore.ekfMu = [toc dataStore.truthPose(1,2:end)];
-        dataStore.ekfSigma = [2 0 0;0 2 0;0 0 0.1];
-        %5b
-                R = 0.01*eye(3);
-                Q = 0.1*eye(9); %for 9 point depth
+        dataStore.beacon = [0,0,-1,0,0,0];   
+        
+        oriPose = dataStore.truthPose(1,2:4);
         
         initsw = 1;
-        [a, b] = drawparticle(dataStore.ekfMu(end,2),dataStore.ekfMu(end,3),dataStore.ekfMu(end,4));
-    % Second Round
-    elseif initsw == 1
-        newstate = integrateOdom_onestep(dataStore.deadReck(end,2),...
-            dataStore.deadReck(end,3), dataStore.deadReck(end,4), dvec, phivec);
-        xt = newstate(1);
-        yt = newstate(2);
-        thetat = newstate(3);
+        %% PF
         
-        dataStore.ekfMu = [dataStore.ekfMu; toc dataStore.truthPose(2,2:end)];
-        dataStore.ekfSigma = cat(3,dataStore.ekfSigma,dataStore.ekfSigma);
-        initsw = 2;
-    % More Than Three Round    
+        xpart = -5*rand(numpart,1);
+        ypart = 10*rand(numpart,1)-5;
+        thepart = 0.4*rand(numpart,1)-0.2;
+        wi = ones(numpart,1)/numpart;
+        dataStore.particles = [xpart ypart thepart wi];
+        [a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
     else
-        newstate = integrateOdom_onestep(dataStore.deadReck(end,2),...
-            dataStore.deadReck(end,3), dataStore.deadReck(end,4), dvec, phivec);
-        xt = newstate(1);
-        yt = newstate(2);
-        thetat = newstate(3);
-        
-        mu_last = dataStore.ekfMu(end,2:end);
-        sig_last = dataStore.ekfSigma(:,:,end);
-        
-        g_handle = @(mubar, u) integrateOdom_onestep(mubar(1),mubar(2),mubar(3),u(1),u(2));
-        Gjac_handle = @(mubar, u) GjacDiffDrive(mubar, u(1), u(2));
-        
-        dlast = dataStore.odometry(end-1,2);
-        philast = dataStore.odometry(end-1,3);
-        
-        ctrlbar = [dlast philast];
-        h_handle = @(mutbar) drPredict(mutbar,mapdata,sensorOrigin,angles);
-        mu_lastlast = dataStore.ekfMu(end-1,2:end);
-        mutbarbar = integrateOdom_onestep(mu_lastlast(1),mu_lastlast(2),...
-            mu_lastlast(3),ctrlbar(1),ctrlbar(2));
-        Hjac_handle = @(mutbar) HjacDepth(mutbarbar,mutbar,mapdata);
-        
         
         ctrl = [dvec phivec];
-        zt = dataStore.rsdepth(end,3:end)';
+        zt = [dataStore.rsdepth(end,3:end) dataStore.beacon(end,3:5)]';
         
-        [mu_t, sig_t, kt] = extendedKalmanFilter(h_handle,g_handle,...
-            Hjac_handle,Gjac_handle,mu_last,sig_last,ctrl,R,Q,zt);
-        dataStore.kttest = cat(3,dataStore.kttest,kt);
-        dataStore.ekfMu = [dataStore.ekfMu; toc mu_t'];
-        dataStore.ekfSigma = cat(3,dataStore.ekfSigma,sig_t);
+        %% PF
+        M_init = dataStore.particles(:,:,end);
+        ctrl_handle = @(mubar,ubar) integrateOdom_onestep_wnoise(mubar(1),...
+            mubar(2),mubar(3),ubar(1),ubar(2));
+        w_handle = @(xtpred,meas) findWeight(xtpred,mapdata,sensorOrigin,...
+            angles,meas,beaconmat);
+        o_handle = @(PSet) offmap_detect(PSet,mapdata);
+        reinit_handle = @() resample(mapdata,numpart);
+        [M_final,Mt]= particleFilter(M_init,ctrl,zt,ctrl_handle,w_handle,o_handle,reinit_handle);
+        dataStore.particles = cat(3,dataStore.particles,M_final);
+        dataStore.debugparticles = cat(3,dataStore.debugparticles,Mt);
+        
     end
+    [p,~] = size(dataStore.beacon);
+    if p==q
+        dataStore.beacon = [dataStore.beacon; [0,0,-1,0,0,0]];
+    end
+    disp(dataStore.beacon(end,3));
     
     delete(a)
     delete(b)
-    [a, b] = drawparticle(dataStore.ekfMu(end,2),dataStore.ekfMu(end,3),dataStore.ekfMu(end,4));
-    
-    
+    [a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
     
     % CONTROL FUNCTION (send robot commands)
     
@@ -174,8 +165,14 @@ while toc < maxTime
     % if overhead localization loses the robot for too long, stop it
     if noRobotCount >= 3
         SetFwdVelAngVelCreate(CreatePort, 0,0);
+    elseif spinsw<2
+        SetFwdVelAngVelCreate(CreatePort, cmdV2, cmdW2 );
+        if(dataStore.truthPose(end,4) - oriPose(3) > 1.5*pi)
+            spinsw = spinsw+1;
+        end
     elseif done==1 && wall==0 && rotate==1
-        SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW );
+        SetFwdVelAng
+        VelCreate(CreatePort, cmdV, cmdW );
         %go forward unless it hits something all around
         [BumpRight,BumpLeft,WheDropRight,WheDropLeft,WheDropCaster,BumpFront] = BumpsWheelDropsSensorsRoomba(CreatePort);
         if BumpFront || BumpRight || BumpLeft
