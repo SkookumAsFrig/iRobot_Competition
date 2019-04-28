@@ -2,11 +2,11 @@ clc
 clear all
 close all
 
-load('biRRT_bigtestrun3.mat')
-map = 'compMap_big.mat';
+% load('biRRT_bigtestrun3.mat')
+% map = 'compMap_big.mat';
 
-% load('RRT_testrun.mat')
-% map = 'compMap.mat';
+load('RRT_testrun3.mat')
+map = 'compMap.mat';
 mapstruct = importdata(map);
 beaconmat = mapstruct.beaconLoc;
 [o,~] = size(beaconmat);
@@ -60,7 +60,7 @@ for i=1:length(dataStore.truthPose(:,1))
         xi = mean(dataStore.particles(:,1,i-1));
         yi = mean(dataStore.particles(:,2,i-1));
         thetai = mean(dataStore.particles(:,3,i-1));
-        seeBeacInd = 7;
+        seeBeacInd = 1;
     else
         xi = deadreck(i,1);
         yi = deadreck(i,2);
