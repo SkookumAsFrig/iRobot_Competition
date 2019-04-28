@@ -2,11 +2,11 @@ clc
 clear all
 close all
 
-load('biRRT_bigtestrun.mat')
-map = 'compMap_big.mat';
+% load('biRRT_bigtestrun.mat')
+% map = 'compMap_big.mat';
 
-% load('RRT_testrun.mat')
-% map = 'compMap.mat';
+load('RRT_testrun.mat')
+map = 'compMap.mat';
 mapstruct = importdata(map);
 beaconmat = mapstruct.beaconLoc;
 [o,~] = size(beaconmat);
@@ -54,7 +54,7 @@ for i=1:length(dataStore.truthPose(:,1))
         seeBeacInd = 1;
     end
     
-    if seeBeacInd>7
+    if seeBeacInd>15
         xi = mean(dataStore.particles(:,1,i-1));
         yi = mean(dataStore.particles(:,2,i-1));
         thetai = mean(dataStore.particles(:,3,i-1));
@@ -88,7 +88,7 @@ for i=1:length(dataStore.truthPose(:,1))
         M_init = dataStore.particles(:,:,end);
         ctrl_handle = @(mubar,ubar) integrateOdom_onestep_wnoise(mubar(1),...
             mubar(2),mubar(3),ubar(1),ubar(2));
-        w_handle = @(xtpred,meas) findWeight(xtpred,mapdata,sensorOrigin,...
+        w_handle = @(xtpred,meas) findWeight_ori(xtpred,mapdata,sensorOrigin,...
             angles,meas,beaconmat);
         o_handle = @(PSet) offmap_detect(PSet,mapdata);
         reinit_handle = @() resample(mapdata,numpart);

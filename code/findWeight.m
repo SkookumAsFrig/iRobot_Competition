@@ -34,12 +34,20 @@ depth = depthPredict(angles, range);
 [canSee, coordinates] = beaconPredict(robotPose,sensorOrigin,map,n,beaconmat,m);
 
 ldp = length(depth);
-beacondata = zt(ldp+1:end);
+beacondata = zt(ldp+1:end-3);
+deadreck = zt(end-2:end);
 wt = zeros(ldp,1);
 wtbeacon = zeros(m,1);
+wtDR = zeros(3,1);
 for i=1:ldp
     wt(i) = normpdf(zt(i),depth(i),sqrt(0.1));
 end
+
+wtDR(1) = normpdf(robotPose(1),deadreck(1),sqrt(0.1));
+wtDR(2) = normpdf(robotPose(2),deadreck(2),sqrt(0.1));
+wtDR(3) = normpdf(robotPose(3),deadreck(3),sqrt(0.1));
+
+wtDR = 5*wtDR;
 
 lowprob = 0.00000001;
 highprob = 1;
@@ -59,7 +67,7 @@ for i=1:m
     end
 end
 
-weight = prod([wt; wtbeacon]);
+weight = prod([wt; wtbeacon; wtDR]);
 
 % delete(g)
 % delete(j)
