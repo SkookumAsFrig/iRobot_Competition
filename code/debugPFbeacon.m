@@ -37,14 +37,17 @@ for i=1:length(dataStore.truthPose(:,1))
     disp(i)
     hold on
     axis equal
+    %% PLOT MAP
     for j=1:l
         plot([mapdata(j,1) mapdata(j,3)],[mapdata(j,2) mapdata(j,4)],'LineWidth',2,'Color','k','HandleVisibility','off')
     end
+    %% PLOT BEACON LOCATION & TAGNUM
     for e=1:o
         plot(beaconmat(e,2),beaconmat(e,3),'rp','MarkerFaceColor','r')
         text(beaconmat(e,2),beaconmat(e,3),num2str(beaconmat(e,1)))
     end
     
+    %% ODOMETRY
     dvec = dataStore.odometry(i,2);
     phivec = dataStore.odometry(i,3);
     

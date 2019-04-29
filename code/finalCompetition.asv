@@ -98,7 +98,6 @@ sensorOrigin = [0.13 0];
 angles = linspace(27*pi/180,-27*pi/180,9);
 spinsw = 0;
 count = 0;
-startTimer = 0;
 [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
 
 tic
@@ -184,18 +183,13 @@ while toc < maxTime
                 spinsw = spinsw+1;  % spinsw: 0 -> 1
             end
         else
-            if dataStore.beacon(end,3) ~= -1
-                if startTimer == 0
-                    SetFwdVelAngVelCreate(CreatePort, 0, 0 );
-                    timer1 = toc;
-                    startTimer = 1;
-                else
-                    if toc - timer1 > 3
-                        spinsw = spinsw+1;  % spinsw: 1 -> 2
-                    end
-                end
+            if dataStore.beacon(end,3) ~= -1 
+                SetFwdVelAngVelCreate(CreatePort, 0, 0 );
+                timer1 = toc;
             end
-
+            if toc - timer1 > 3
+                spinsw = spinsw+1;  % spinsw: 1 -> 2
+            end
         end
     elseif done==1 && wall==0 && rotate==1
         SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW );
