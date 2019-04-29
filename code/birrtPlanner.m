@@ -102,7 +102,7 @@ while toc < maxTime && last~=1
     [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
     
     % CONTROL FUNCTION (send robot commands)
-    
+
     [p,~] = size(dataStore.beacon);
     if p==q
         dataStore.timebeacon = [dataStore.timebeacon; repmat([-1,0,0],1,beaconsize)];
