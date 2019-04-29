@@ -1,4 +1,4 @@
-function[dataStore] = motionControl_PF(CreatePort,DistPort,TagPort,tagNum,maxTime)
+function[dataStore] = finalCompetition(CreatePort,DistPort,TagPort,tagNum,maxTime)
 % backupBump: Drives robot forward at constant velocity until it bumps
 % into somthing. If a bump sensor is triggered, command the robot to back
 % up 0.25m and turn clockwise 30 degs, before continuing to drive forward
@@ -99,7 +99,7 @@ angles = linspace(27*pi/180,-27*pi/180,9);
 dvec = 0;
 phivec = 0;
 % particle number
-numpart = 250;
+numpart = 100;
 
 partTraj = [];
 
@@ -119,9 +119,10 @@ xrange = (maxX-minX);
 yrange = (maxY-minY);
 beconID = beaconmat(:,1);
 
+tic
+
 [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
 deadreck = dataStore.truthPose(1,2:4);
-tic
 
 while toc < maxTime
     % READ & STORE SENSOR DATA
@@ -133,13 +134,13 @@ while toc < maxTime
     [p,~] = size(dataStore.beacon);
     if p==q
         dataStore.timebeacon = [dataStore.timebeacon; repmat([-1,0,0],1,o)];
-        disp("cannot see beacon")
+        %disp("cannot see beacon")
     else
         newpsize = p-q-1;
         newdata = reshape(dataStore.beacon(end-newpsize:end,3:5)',1,[]);
         newdata = padarray(newdata,[0 3*o-length(newdata)],-1,'post');
         dataStore.timebeacon = [dataStore.timebeacon; newdata];
-        disp("I see beacon!")
+        %disp("I see beacon!")
     end
     
     dvec = dataStore.odometry(end,2);
@@ -180,7 +181,7 @@ while toc < maxTime
         wi = ones(numpart,1)/numpart;
         dataStore.particles = [xpart ypart thepart wi];
         % plot particles set
-        [a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
+        %[a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
         
         % To next state
         initsw = 1;
@@ -209,9 +210,11 @@ while toc < maxTime
     partTraj = [partTraj; [xpartmean ypartmean tpartmean]];
     plot(dataStore.truthPose(1:end,2),dataStore.truthPose(1:end,3),'b')
     plot(deadreck(1:end,1),deadreck(1:end,2),'g')
-    delete(a);
-    delete(b);
-    [a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
+    [a, b] = drawparticlestar_green(deadreck(end,1),deadreck(end,2),deadreck(end,3));
+    
+%     delete(a);
+%     delete(b);
+    %[a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
 
 %     [p,~] = size(dataStore.beacon);
 %     if p==q
@@ -251,7 +254,7 @@ while toc < maxTime
         if spinsw == 0
             SetFwdVelAngVelCreate(CreatePort, cmdV2, cmdW2 );
             turnSum = turnSum + dataStore.odometry(end,3);
-            if abs(turnSum) >= 4*pi
+            if abs(turnSum) >= 2*pi
                 spinTwo = 1;
             end
             if(spinTwo == 1)
@@ -260,6 +263,7 @@ while toc < maxTime
         else
             % beacon in view
             if dataStore.timebeacon(end,1) ~= -1
+                disp("stopped and I see beacon!")
                 if startTimer == 0
                     SetFwdVelAngVelCreate(CreatePort, 0, 0 );                  
                     timer1 = toc;
@@ -336,6 +340,8 @@ while toc < maxTime
     end
     
     pause(0.1);
+    delete(a);
+    delete(b);
 end
 
 % set forward and angular velocity to zero (stop robot) before exiting the function

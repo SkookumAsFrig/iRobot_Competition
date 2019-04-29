@@ -1,4 +1,4 @@
-function[dataStore] = motionControl_PF(CreatePort,DistPort,TagPort,tagNum,maxTime)
+function[dataStore] = finalCompetition_biRRT(CreatePort,DistPort,TagPort,tagNum,maxTime)
 % backupBump: Drives robot forward at constant velocity until it bumps
 % into somthing. If a bump sensor is triggered, command the robot to back
 % up 0.25m and turn clockwise 30 degs, before continuing to drive forward
@@ -50,15 +50,15 @@ global dataStore;
 
 % initialize datalog struct (customize according to needs)
 dataStore = struct('truthPose', [],...
-                   'odometry', [], ...
-                   'rsdepth', [], ...
-                   'bump', [], ...
-                   'beacon', [], ...
-                   'timebeacon', [], ...
-                   'deadReck', [], ...
-                   'ekfMu', [], ...
-                   'ekfSigma', [],...
-                   'particles', []);
+    'odometry', [], ...
+    'rsdepth', [], ...
+    'bump', [], ...
+    'beacon', [], ...
+    'timebeacon', [], ...
+    'deadReck', [], ...
+    'ekfMu', [], ...
+    'ekfSigma', [],...
+    'particles', []);
 
 %% Initialize Condition Variables
 % Variable used to keep track of whether the overhead localization "lost"
@@ -117,40 +117,74 @@ minX = min([min(mapdata(:,1)) min(mapdata(:,3))]);
 minY = min([min(mapdata(:,2)) min(mapdata(:,4))]);
 xrange = (maxX-minX);
 yrange = (maxY-minY);
+beconID = beaconmat(:,1);
+
+goalp = [-2.5 1];
+map = 'compMap.mat';
+
+%goalp = [3 3];
+%goalp = [1.5 3.5];
+% goalp = [-3 3.5];
+% map = 'compMap_big.mat';
+
+mapstruct = importdata(map);
+mapdata = mapstruct.map;
+[l,~] = size(mapdata);
+xmin = min(min([mapdata(:,1) mapdata(:,3)]));
+ymin = min(min([mapdata(:,2) mapdata(:,4)]));
+xmax = max(max([mapdata(:,1) mapdata(:,3)]));
+ymax = max(max([mapdata(:,2) mapdata(:,4)]));
+limits = [xmin ymin xmax ymax];
+%sampling_handle = @(limits,lastind) lowdisp_resample(limits,lastind);
+sampling_handle = @(limits) uniformresample(limits);
+radius = 0.3;
+stepsize = 0.2;
+oneshot = 0;
+
+%constants to initialize
+epsilon = 0.3;
+closeEnough = 0.1;
+gotopt = 1;
+reached = 0;
+alph = 20;
+%last is to stop robot when last waypoint is reached
+last = 0;
+[beaconsize,~] = size(mapstruct.beaconLoc);
+
+tic
 
 [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
 deadreck = dataStore.truthPose(1,2:4);
-tic
 
-while toc < maxTime
+while toc < maxTime && last~=1
     % READ & STORE SENSOR DATA
     
     [q,~] = size(dataStore.beacon);
     
     [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
-     
+    
     [p,~] = size(dataStore.beacon);
     if p==q
         dataStore.timebeacon = [dataStore.timebeacon; repmat([-1,0,0],1,o)];
-        disp("cannot see beacon")
+        %disp("cannot see beacon")
     else
         newpsize = p-q-1;
         newdata = reshape(dataStore.beacon(end-newpsize:end,3:5)',1,[]);
         newdata = padarray(newdata,[0 3*o-length(newdata)],-1,'post');
         dataStore.timebeacon = [dataStore.timebeacon; newdata];
-        disp("I see beacon!")
+        %disp("I see beacon!")
     end
     
     dvec = dataStore.odometry(end,2);
-    phivec = 1.1*dataStore.odometry(end,3);
+    phivec = 1.05*dataStore.odometry(end,3);
     
     if dataStore.timebeacon(end,1)~=-1
         seeBeacInd = seeBeacInd+1;
     else
         seeBeacInd = 1;
     end
-
-    if seeBeacInd>10
+    
+    if seeBeacInd>5
         xi = mean(dataStore.particles(:,1,end-1));
         yi = mean(dataStore.particles(:,2,end-1));
         thetai = mean(dataStore.particles(:,3,end-1));
@@ -167,7 +201,7 @@ while toc < maxTime
     %% STATE 0: INIT
     if initsw == 0
         % init beacon
-        dataStore.beacon = [0,0,-1,0,0,0];   
+        dataStore.beacon = [0,0,-1,0,0,0];
         % PROBLEM!!! Cannot initialize!
         oriPose = dataStore.odometry(1,3);
         turnSum = oriPose;
@@ -179,11 +213,11 @@ while toc < maxTime
         wi = ones(numpart,1)/numpart;
         dataStore.particles = [xpart ypart thepart wi];
         % plot particles set
-        [a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
+        %[a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
         
         % To next state
         initsw = 1;
-    %% STATE 2:
+        %% STATE 2:
     else
         ctrl = [dvec phivec];
         zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) deadreck(end,:)]';
@@ -197,7 +231,9 @@ while toc < maxTime
         o_handle = @(PSet) offmap_detect(PSet,mapdata);
         reinit_handle = @() resample(mapdata,numpart);
         [M_final,Mt]= particleFilter(M_init,ctrl,zt,ctrl_handle,w_handle,o_handle,reinit_handle);
-        dataStore.particles = cat(3,dataStore.particles,M_final);        
+        dataStore.particles = cat(3,dataStore.particles,M_final);
+        
+        
     end
     
     xpartmean = mean(dataStore.particles(:,1,end));
@@ -206,26 +242,21 @@ while toc < maxTime
     partTraj = [partTraj; [xpartmean ypartmean tpartmean]];
     plot(dataStore.truthPose(1:end,2),dataStore.truthPose(1:end,3),'b')
     plot(deadreck(1:end,1),deadreck(1:end,2),'g')
+    if ~(spinsw <= 1)
+        plot(partTraj(:,1),partTraj(:,2),'r')
+    end
+    %     [h, i] = drawparticlestar_green(deadreck(end,1),deadreck(end,2),deadreck(end,3));
+    [h, i] = drawparticlestar_green(xpartmean,ypartmean,tpartmean);
     
-%     [p,~] = size(dataStore.beacon);
-%     if p==q
-%         dataStore.beacon = [dataStore.beacon; [0,0,-1,0,0,0]];
-%     end
-%     disp(dataStore.beacon(end,3));
-%     
-%      delete(a)
-%      delete(b)
-%      [a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
+    %     delete(a);
+    %     delete(b);
+    %[a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
     
     % CONTROL FUNCTION (send robot commands)
     
-    % Set forward velocity
-    fwdVel = 0.2;
-    angVel = 0;
-    [cmdV,cmdW] = limitCmds(fwdVel,angVel,0.49,0.13);
     % Set rotate velocity
     fwdVel2 = 0;
-    angVel2 = -0.2;
+    angVel2 = -0.4;
     [cmdV2,cmdW2] = limitCmds(fwdVel2,angVel2,0.49,0.13);
     
     % if overhead localization loses the robot for too long, stop it
@@ -235,28 +266,18 @@ while toc < maxTime
         if spinsw == 0
             SetFwdVelAngVelCreate(CreatePort, cmdV2, cmdW2 );
             turnSum = turnSum + dataStore.odometry(end,3);
-            if abs(turnSum) >= 4*pi
+            if abs(turnSum) >= 2*pi
                 spinTwo = 1;
             end
             if(spinTwo == 1)
                 spinsw = spinsw+1;  % spinsw: 0 -> 1
             end
         else
-            if cumprod(dataStore.timebeacon(end,1:3:end)) == -1 ...
-            && dataStore.timebeacon(end,3) ~= -1 ...
-            && dataStore.timebeacon(end,3) ~= -1 ...
-            && dataStore.timebeacon(end,3) ~= -1 
+            % beacon in view
+            if dataStore.timebeacon(end,1) ~= -1
+                disp("stopped and I see beacon!")
                 if startTimer == 0
                     SetFwdVelAngVelCreate(CreatePort, 0, 0 );
-                    xyR_l = [10*cos(pi*27/180),10*sin(pi*27/180)];
-                    xyR_r = [10*cos(-pi*27/180),10*sin(-pi*27/180)];
-                    xyG_o = robot2global(dataStore.truthPose(end,2:4),sensorOrigin);
-                    [xyG_l] = robot2global(dataStore.truthPose(end,2:4),xyR_l);
-                    [xyG_r] = robot2global(dataStore.truthPose(end,2:4),xyR_r);
-                    line([xyG_o(1),xyG_l(1)],[xyG_o(2),xyG_l(2)])
-                    hold on;
-                    line([xyG_o(1),xyG_r(1)],[xyG_o(2),xyG_r(2)])
-                    
                     timer1 = toc;
                     startTimer = 1;
                 else
@@ -265,68 +286,72 @@ while toc < maxTime
                     end
                 end
             end
-
+            
         end
-    elseif done==1 && wall==0 && rotate==1
+    else
+        fig1 = gcf;
+        if oneshot==0
+            %dataStore.timebeacon = [0,0,-1,0,0,0];
+            fig2 = figure;
+            hold on
+            for j=1:l
+                a=plot([mapdata(j,1) mapdata(j,3)],[mapdata(j,2) mapdata(j,4)],'LineWidth',2,'Color','k','HandleVisibility','off');
+            end
+            axis equal
+            nowp = deadreck(end,1:2);
+            [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,goalp,stepsize,radius);
+            
+            d=plot(pathpoints(:,1),pathpoints(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1]);
+            e=plot(nowp(1),nowp(2),'ko','MarkerFaceColor',[1 0 0]);
+            f=plot(goalp(1),goalp(2),'ko','MarkerFaceColor',[0 1 0]);
+            
+            oneshot=1;
+            waypoints = pathpoints;
+            [m,~] = size(waypoints);
+        end
+        figure(fig1)
+        
+        % Get current pose
+        
+        x = xpartmean;
+        y = ypartmean;
+        theta = tpartmean;
+        %         x = deadreck(end,1);
+        %         y = deadreck(end,2);
+        %         theta = deadreck(end,3);
+        
+        if reached==1 && gotopt~=m
+            %if reached current waypoint, increment index and reset reached
+            gotopt = gotopt+1;
+            reached = 0;
+        elseif gotopt==m && reached==1
+            %if last one reached, flag last
+            last = 1;
+        end
+        %run visitWaypoints
+        [vout,wout,reached] = visitWaypoints(waypoints,gotopt,closeEnough,epsilon, alph, x, y, theta);
+        [cmdV,cmdW] = limitCmds(vout,wout,0.06,0.03);
+        
+        if last==1
+            %stop robot if last one reached
+            cmdV=0;
+            cmdW=0;
+        end
+        
         SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW );
-        %go forward unless it hits something all around
-        [BumpRight,BumpLeft,WheDropRight,WheDropLeft,WheDropCaster,BumpFront] = BumpsWheelDropsSensorsRoomba(CreatePort);
-        if BumpFront || BumpRight || BumpLeft
-            %go into back up state
-            wall = 1;
-            done = 0;
-            rotate = 0;
-        end
-    elseif done==0 && wall==1 && rotate==0
-        if distanceticker == 0
-            %oneshot to set back up distance reference
-            Lastpoint = dataStore.truthPose(end,2:3);
-            distanceticker = 1;
-        else
-            %calculate distance by sqrt(deltax^2+deltay^2)
-            Distanceout = norm(dataStore.truthPose(end,2:3) - Lastpoint);
-        end
-        
-        if Distanceout < 0.25
-            %back up if not there yet
-            SetFwdVelAngVelCreate(CreatePort, -cmdV, cmdW );
-        else
-            %if reached, stop and go into rotate state
-            SetFwdVelAngVelCreate(CreatePort, 0, 0 );
-            Distanceout = 0;
-            distanceticker = 0;
-            done = 1;
-            wrap = 0;
-            Lastangle = dataStore.truthPose(end,4);
-            %record angle for turn reference
-        end
-    elseif done==1 && wall==1 && rotate==0
-        test = dataStore.truthPose(end,4) - Lastangle;
-        %test for wrap around
-        if abs(test)>pi
-            %pi is arbitrary threshold, tbh anything over pi/6 works
-            wrap = 2*pi;
-        end
-        Angleout = dataStore.truthPose(end,4) - Lastangle - wrap;
-        %this algo fixes wraparound issues
-        
-        if abs(Angleout) < pi/6
-            %keep turning if not there yet
-            SetFwdVelAngVelCreate(CreatePort, cmdV2, cmdW2 );
-        else
-            %stop if reached, go into forward state and reset all temp
-            %variables
-            SetFwdVelAngVelCreate(CreatePort, 0, 0 );
-            Angleout = 0;
-            rotateticker = 0;
-            rotate = 1;
-            wall = 0;
-            wrap = 0;
-        end
     end
     
     pause(0.1);
+    delete(h);
+    delete(i);
 end
-
+figure(fig2)
 % set forward and angular velocity to zero (stop robot) before exiting the function
 SetFwdVelAngVelCreate(CreatePort, 0,0 );
+g = plot(dataStore.truthPose(:,2),dataStore.truthPose(:,3),'b');
+legend([a expath expoint expath2 expoint2 d e f g],'Map','Start Search Tree Edges',...
+    'Start Search Tree Nodes','Goal Search Tree Edges','Goal Search Tree Nodes',...
+    'Final Solution Path','Starting Point','Goal Point','Actual Trajectory','Location','northeastoutside')
+title('birrtPlanner Search Tree, Solution Path and Robot Trajectory')
+xlabel('Global X')
+ylabel('Global Y')
