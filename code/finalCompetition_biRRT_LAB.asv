@@ -268,7 +268,6 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
     if noRobotCount >= 3
         SetFwdVelAngVelCreate(CreatePort, 0,0);
     elseif spinsw <= 1
-        % START SPINNING
         if spinsw == 0
             noiseprofile = [sqrt(2) sqrt(2) sqrt(2)];
             DRweight = 0;
@@ -281,7 +280,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
             if(spinTwo == 1)
                 spinsw = spinsw+1;  % spinsw: 0 -> 1
             end
-        % KEEP SPINNING
+        % keep spinning
         else
             noiseprofile = [sqrt(0.3) sqrt(0.3) sqrt(0.3)];
             % when a beacon in view then stop
@@ -346,8 +345,6 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         % PRINT-----------------------------------
         disp(['cmdV is ' num2str(cmdV)])
         disp(['cmdW is ' num2str(cmdW)])
-        % PRINT-----------------------------------
-        
         if last==1
             %stop robot if last one reached
             cmdV=0;
@@ -364,7 +361,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         
         SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW);
     end
-    % PLOT-----------------------------------
+    % PLOT
     figure(1)
     hold on
     [x, z, c, v] = drawparticlestar(dataStore.truthPose(end,2),dataStore.truthPose(end,3),dataStore.truthPose(end,4));
@@ -378,10 +375,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
     delete(v);
     delete(x);
     delete(z);
-    % PLOT-----------------------------------
 end
-
-% PLOT-----------------------------------
 figure(2)
 % set forward and angular velocity to zero (stop robot) before exiting the function
 SetFwdVelAngVelCreate(CreatePort, 0,0 );
@@ -392,4 +386,3 @@ legend([a expath expoint expath2 expoint2 d e f g],'Map','Start Search Tree Edge
 title('birrtPlanner Search Tree, Solution Path and Robot Trajectory')
 xlabel('Global X')
 ylabel('Global Y')
-% PLOT-----------------------------------
