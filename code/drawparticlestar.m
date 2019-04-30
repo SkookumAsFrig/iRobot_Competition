@@ -1,4 +1,4 @@
-function [a, b] = drawparticlestar(x,y,theta)
+function [a, b, c, d] = drawparticlestar(x,y,theta)
 % RANGEPREDICT: predict the range measurements for a robot operating
 % in a known map.
 %
@@ -35,9 +35,9 @@ endpty = y+ptrlength*sin(theta);
 b = plot([x endptx],[y endpty],'k','LineWidth',2);
 endptx = x+FOVlength*cos(theta+angFOV);
 endpty = y+FOVlength*sin(theta+angFOV);
-plot([x endptx],[y endpty],'b','LineWidth',1);
+c = plot([x endptx],[y endpty],'b','LineWidth',1);
 endptx = x+FOVlength*cos(theta-angFOV);
 endpty = y+FOVlength*sin(theta-angFOV);
-plot([x endptx],[y endpty],'b','LineWidth',1);
+d = plot([x endptx],[y endpty],'b','LineWidth',1);
 
 end

@@ -1,4 +1,4 @@
-function weight = findWeight_comp(robotPose,map,sensorOrigin,angles,zt,beaconmat)
+function weight = findWeight_comp(robotPose,map,sensorOrigin,angles,zt,beaconmat,DRweight)
 % RANGEPREDICT: predict the range measurements for a robot operating
 % in a known map.
 %
@@ -47,7 +47,7 @@ wtDR(1) = normpdf(robotPose(1),deadreck(1),sqrt(0.1));
 wtDR(2) = normpdf(robotPose(2),deadreck(2),sqrt(0.1));
 wtDR(3) = normpdf(robotPose(3),deadreck(3),sqrt(0.1));
 
-wtDR = 2*wtDR;
+wtDR = DRweight*wtDR;
 
 lowprob = 0.00000001;
 highprob = 1;

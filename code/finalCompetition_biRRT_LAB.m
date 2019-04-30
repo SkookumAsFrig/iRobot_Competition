@@ -99,7 +99,7 @@ angles = linspace(27*pi/180,-27*pi/180,9);
 dvec = 0;
 phivec = 0;
 % particle number
-numpart = 100;
+numpart = 125;
 
 partTraj = [];
 
@@ -119,7 +119,7 @@ xrange = (maxX-minX);
 yrange = (maxY-minY);
 beconID = beaconmat(:,1);
 
-goalp = [2 1];
+goalp = [2.33 0.82];
 map = 'compMap_mod.mat';
 
 %goalp = [3 3];
@@ -127,14 +127,7 @@ map = 'compMap_mod.mat';
 % goalp = [-3 3.5];
 % map = 'compMap_big.mat';
 
-mapstruct = importdata(map);
-mapdata = mapstruct.map;
-[l,~] = size(mapdata);
-xmin = min(min([mapdata(:,1) mapdata(:,3)]));
-ymin = min(min([mapdata(:,2) mapdata(:,4)]));
-xmax = max(max([mapdata(:,1) mapdata(:,3)]));
-ymax = max(max([mapdata(:,2) mapdata(:,4)]));
-limits = [xmin ymin xmax ymax];
+limits = [minX minY maxX maxY];
 %sampling_handle = @(limits,lastind) lowdisp_resample(limits,lastind);
 sampling_handle = @(limits) uniformresample(limits);
 radius = 0.3;
@@ -142,7 +135,7 @@ stepsize = 0.4;
 oneshot = 0;
 
 %constants to initialize
-epsilon = 0.1;
+epsilon = 0.2;
 closeEnough = 0.1;
 gotopt = 1;
 reached = 0;
@@ -150,8 +143,13 @@ alph = 20;
 %last is to stop robot when last waypoint is reached
 last = 0;
 [beaconsize,~] = size(mapstruct.beaconLoc);
+DRweight = 1;
+
+
+tic
 
 figure(1)
+hold on
 for j=1:l
     plot([mapdata(j,1) mapdata(j,3)],[mapdata(j,2) mapdata(j,4)],'LineWidth',2,'Color','k','HandleVisibility','off')
 end
@@ -159,13 +157,15 @@ for e=1:beaconsize
     plot(beaconmat(e,2),beaconmat(e,3),'rp','MarkerFaceColor','r')
     text(beaconmat(e,2),beaconmat(e,3),num2str(beaconmat(e,1)))
 end
-hold on
-axis equal
+xlim([-3, 3]);
+ylim([-2.5, 2.5]);
 
-tic
+hold on
 
 [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
-deadreck = dataStore.truthPose(1,2:4);
+%deadreck = dataStore.truthPose(1,2:4);
+deadreck = [minX+xrange/2 minY+yrange/2 0];
+noiseprofile = [sqrt(0.5) sqrt(0.5) sqrt(0.5)];
 
 while toc < maxTime && last~=1
     % READ & STORE SENSOR DATA
@@ -235,8 +235,8 @@ while toc < maxTime && last~=1
         
         %% PF
         M_init = dataStore.particles(:,:,end);
-        ctrl_handle = @(mubar,ubar) integrateOdom_onestep_wnoise(mubar(1),...
-            mubar(2),mubar(3),ubar(1),ubar(2));
+        ctrl_handle = @(mubar,ubar) integrateOdom_dynamic(mubar(1),...
+            mubar(2),mubar(3),ubar(1),ubar(2),noiseprofile);
         w_handle = @(xtpred,meas) findWeight(xtpred,mapdata,sensorOrigin,...
             angles,meas,beaconmat);
         o_handle = @(PSet) offmap_detect(PSet,mapdata);
@@ -250,10 +250,10 @@ while toc < maxTime && last~=1
     xpartmean = mean(dataStore.particles(:,1,end));
     ypartmean = mean(dataStore.particles(:,2,end));
     tpartmean = mean(dataStore.particles(:,3,end));
-    partTraj = [partTraj; [xpartmean ypartmean tpartmean]];
     plot(dataStore.truthPose(1:end,2),dataStore.truthPose(1:end,3),'b')
     plot(deadreck(1:end,1),deadreck(1:end,2),'g')
     if ~(spinsw <= 1)
+        partTraj = [partTraj; [xpartmean ypartmean tpartmean]];
         plot(partTraj(:,1),partTraj(:,2),'r')
     end
     %     [h, i] = drawparticlestar_green(deadreck(end,1),deadreck(end,2),deadreck(end,3));
@@ -274,9 +274,11 @@ while toc < maxTime && last~=1
         SetFwdVelAngVelCreate(CreatePort, 0,0);
     elseif spinsw <= 1
         if spinsw == 0
+            noiseprofile = [sqrt(2) sqrt(2) sqrt(2)];
+            DRweight = 0;
             SetFwdVelAngVelCreate(CreatePort, cmdV2, cmdW2 );
             turnSum = turnSum + dataStore.odometry(end,3);
-            if abs(turnSum) >= 1*pi
+            if abs(turnSum) >= 2*pi
                 spinTwo = 1;
             end
             if(spinTwo == 1)
@@ -284,6 +286,7 @@ while toc < maxTime && last~=1
             end
         else
             % beacon in view
+            noiseprofile = [sqrt(0.3) sqrt(0.3) sqrt(0.3)];
             if dataStore.timebeacon(end,1) ~= -1
                 disp("stopped and I see beacon!")
                 if startTimer == 0
@@ -291,8 +294,10 @@ while toc < maxTime && last~=1
                     timer1 = toc;
                     startTimer = 1;
                 else
-                    if toc - timer1 > 3
+                    if toc - timer1 > 6
                         spinsw = spinsw+1;  % spinsw: 1 -> 2
+                        noiseprofile = [sqrt(0.005) sqrt(0.005) sqrt(0.1)];
+                        DRweight = 3;
                     end
                 end
             end
@@ -317,15 +322,6 @@ while toc < maxTime && last~=1
             oneshot=1;
             waypoints = pathpoints;
             [m,~] = size(waypoints);
-        end
-        figure(1)
-        
-        for j=1:l
-            plot([mapdata(j,1) mapdata(j,3)],[mapdata(j,2) mapdata(j,4)],'LineWidth',2,'Color','k','HandleVisibility','off')
-        end
-        for e=1:beaconsize
-            plot(beaconmat(e,2),beaconmat(e,3),'rp','MarkerFaceColor','r')
-            text(beaconmat(e,2),beaconmat(e,3),num2str(beaconmat(e,1)))
         end
         
         % Get current pose
@@ -367,13 +363,16 @@ while toc < maxTime && last~=1
         SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW);
     end
     figure(1)
-    [x, z] = drawparticlestar_green(dataStore.truthPose(end,2),dataStore.truthPose(end,3),dataStore.truthPose(end,4));
+    hold on
+    [x, z, c, v] = drawparticlestar(dataStore.truthPose(end,2),dataStore.truthPose(end,3),dataStore.truthPose(end,4));
     [h, i] = drawparticlestar_red(xpartmean,ypartmean,tpartmean);
     
     pause(0.1);
     
     delete(h);
     delete(i);
+    delete(c);
+    delete(v);
     delete(x);
     delete(z);
 end
