@@ -15,13 +15,10 @@ else
         end
         [serial,idx]=sort(d);
         kIdx = idx(1:kNearest);
-        pointSet = waypoints
+        pointSet = waypoints(kIdx,:);
     else
         pointSet = robot_xy+robot_xy;
         disp("ERROR2!");
     end
 end
-end
-
-
 end
