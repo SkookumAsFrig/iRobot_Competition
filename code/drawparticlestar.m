@@ -26,8 +26,13 @@ function [a, b, c, d] = drawparticlestar(x,y,theta)
 %   SHI, KOWIN
 
 a = plot(x,y,'kp','MarkerSize',15,'MarkerFaceColor','k');
+<<<<<<< HEAD
 hold on
 ptrlength = 0.25;
+=======
+drawnow;
+ptrlength = 0.5;
+>>>>>>> 45e140db3a7d372a0beb3829685123cd4d14c81c
 FOVlength = 5;
 angFOV = 32*pi/180;
 endptx = x+ptrlength*cos(theta);
