@@ -55,56 +55,53 @@ dataStore = struct('truthPose', [],...
     'ekfSigma', [],...
     'particles', []);
 
-global waypoints
-
 %% Initialize Condition Variables
 % Variable used to keep track of whether the overhead localization "lost"
 % the robot (number of consecutive times the robot was not identified).
 % If the robot doesn't know where it is we want to stop it for
 % safety reasons.
 noRobotCount = 0;
-done = 1;   %switches for pseudo-state machine
-wall = 0;   %done for finishing backing up
-rotate = 1; %wall for hitting a wall
-%Lastpoint to reference for distance calculation
-Lastpoint = zeros(1,2);
-%Lastangle to reference for angle calculation
-Lastangle = 0;
-%tickers for one time setting reference
-distanceticker = 0;
-rotateticker = 0;
-%distance and angle values
-Distanceout = 0;
-Angleout = 0;
 
+% sensor data process
+seeBeacInd = 1; % beacon continue seen
+% sampling state machine
 initsw = 0; % state switch flag
-
-spinsw = 0; % inner state switch flag {0---Star spin;
-%1---Finish spin twice;
-%2---Stare at beacon done}
+% control state machine
+spinsw = 0; % state switch flag {0---Star spin;
+                                %1---Finish spin twice;
+                                %2---Stare at beacon done}
 startTimer = 0; % 3-second timer launch flag
+nextwaypoint = 1; % next waypoint indicator
 
-seeBeacInd = 1;
 
-nextwaypoint = 1;
-
-%% Initialize Configuration Variables
+%% Initialize Configuration
+% RSDepth
 sensorOrigin = [0.13 0];
 angles = linspace(27*pi/180,-27*pi/180,9);
-% odometry vector
+% Odometry
 dvec = 0;
 phivec = 0;
-% particle number
+% PF
 numpart = 125;
-
 partTraj = [];
+% RRT
+sampling_handle = @(limits) uniformresample(limits);
+radius = 0.3;
+stepsize = 0.4;
+rrtplan = 0;
+% Visit waypoints
+epsilon = 0.2;
+closeEnough = 0.1;
+gotopt = 1;
+reached = 0;
+alph = 20;
+last = 0;   % stop robot when last waypoint is reached
+finishAll = 0;
 
-%% Load Map & Beacon Information
+%% Load Map File Information
+% map
 map = 'compMap_mod.mat';
 mapstruct = importdata(map);
-mapdata = mapstruct.map;
-beaconmat = mapstruct.beaconLoc;
-[beaconsize,~] = size(beaconmat);
 mapdata = mapstruct.map;
 [mapsize,~] = size(mapdata);
 maxX = max([max(mapdata(:,1)) max(mapdata(:,3))]);
@@ -113,33 +110,23 @@ minX = min([min(mapdata(:,1)) min(mapdata(:,3))]);
 minY = min([min(mapdata(:,2)) min(mapdata(:,4))]);
 xrange = (maxX-minX);
 yrange = (maxY-minY);
+limits = [minX minY maxX maxY];
+
+% beacon
+beaconmat = mapstruct.beaconLoc;
+[beaconsize,~] = size(beaconmat);
 beconID = beaconmat(:,1);
 
-goalp = [2.33 0.82;
-         2.16 -1.03;
-        -2.43 -0.5];
-map = 'compMap_mod.mat';
+% waypoints
+goalp = mapstruct.waypoints;
+waypointsNum = size(goalp,1);
+midpoints = findOptWallMidpoint(mapstruct.optWalls);
+ECwaypoints = mapstruct.ECwaypoints;
+% goalp = [2.33 0.82;
+%          2.16 -1.03;
+%         -2.43 -0.5];
 
-%goalp = [3 3];
-%goalp = [1.5 3.5];
-% goalp = [-3 3.5];
-% map = 'compMap_big.mat';
-
-limits = [minX minY maxX maxY];
-%sampling_handle = @(limits,lastind) lowdisp_resample(limits,lastind);
-sampling_handle = @(limits) uniformresample(limits);
-radius = 0.3;
-stepsize = 0.4;
-rrtplan = 0;
-
-%constants to initialize
-epsilon = 0.2;
-closeEnough = 0.1;
-gotopt = 1;
-reached = 0;
-alph = 20;
-%last is to stop robot when last waypoint is reached
-last = 0;
+%??????
 DRweight = 1;
 
 % PLOT MAP & BEACONS
@@ -164,7 +151,7 @@ noiseprofile = [sqrt(0.5) sqrt(0.5) sqrt(0.5)];
 
 tic
 %% RUNNING LOOP
-while toc < maxTime% && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REACHED
+while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REACHED
     %% ########################################################## %%
     %% ###############SENSOR DATA PROCESS BEGIN################## %%
     %% ########################################################## %%    
@@ -289,7 +276,6 @@ while toc < maxTime% && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
     elseif spinsw <= 1
         % STATE 1.1: START SPINNING (spinsw = 0)
         if spinsw == 0
-            
             SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW);
             turnSum = turnSum + dataStore.odometry(end,3);
             if nextwaypoint == 1 % first waypoint: spin 360 degree and stop when beacon seen
@@ -339,17 +325,21 @@ while toc < maxTime% && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             axis equal
             
             % RRT Planner
-            nowp = deadreck(end,1:2);
-            [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,goalp(nextwaypoint,:),stepsize,radius);
-            
-            % PLOT-----------------------------------
-            d=plot(pathpoints(:,1),pathpoints(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1]);
-            e=plot(nowp(1),nowp(2),'ko','MarkerFaceColor',[1 0 0]);
-            f=plot(goalp(1),goalp(2),'ko','MarkerFaceColor',[0 1 0]);
-            
-            rrtplan=1;
-            waypoints = pathpoints;
-            [m,~] = size(waypoints);
+            if nextwaypoints < waypointsNum
+                nowp = deadreck(end,1:2);
+                [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,goalp(nextwaypoint,:),stepsize,radius);
+                
+                % PLOT-----------------------------------
+                d=plot(pathpoints(:,1),pathpoints(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1]);
+                e=plot(nowp(1),nowp(2),'ko','MarkerFaceColor',[1 0 0]);
+                f=plot(goalp(1),goalp(2),'ko','MarkerFaceColor',[0 1 0]);
+                
+                rrtplan=1;
+                waypoints = pathpoints;
+                [m,~] = size(waypoints);
+            else
+                finishAll = 1;
+            end
         % STATE 2.2: VISIT A WAYPOINT
         else
             % Get current pose
@@ -378,10 +368,10 @@ while toc < maxTime% && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 cmdV=0;
                 cmdW=0;
                 last = 0;
-                spinsw = 0;
-                rrtplan= 0;
-                nextwaypoint = nextwaypoint+1;
-                gotopt = 1;
+                spinsw = 0; % spin again
+                rrtplan= 0; % rrt plan again
+                nextwaypoint = nextwaypoint+1;  % next waypoint
+                gotopt = 1;                     % go to point again
             end      
             SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW);
         end
