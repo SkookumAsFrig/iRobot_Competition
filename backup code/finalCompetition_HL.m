@@ -55,35 +55,6 @@ dataStore = struct('truthPose', [],...
     'ekfSigma', [],...
     'particles', []);
 
-%% Load Map File Information
-% map
-map = 'compMap_mod.mat';
-mapstruct = importdata(map);
-mapdata = mapstruct.map;
-[mapsize,~] = size(mapdata);
-maxX = max([max(mapdata(:,1)) max(mapdata(:,3))]);
-maxY = max([max(mapdata(:,2)) max(mapdata(:,4))]);
-minX = min([min(mapdata(:,1)) min(mapdata(:,3))]);
-minY = min([min(mapdata(:,2)) min(mapdata(:,4))]);
-xrange = (maxX-minX);
-yrange = (maxY-minY);
-limits = [minX minY maxX maxY];
-
-% beacon
-beaconmat = mapstruct.beaconLoc;
-[beaconsize,~] = size(beaconmat);
-beconID = beaconmat(:,1);
-
-% waypoints
-waypoints = mapstruct.waypoints;
-waypointsNum = size(waypoints,1);
-midpoints = findOptWallMidpoint(mapstruct.optWalls);
-ECwaypoints = mapstruct.ECwaypoints;
-% goalp = [2.33 0.82;
-%          2.16 -1.03;
-%         -2.43 -0.5];
-
-
 %% Initialize Condition Variables
 % Variable used to keep track of whether the overhead localization "lost"
 % the robot (number of consecutive times the robot was not identified).
@@ -115,8 +86,8 @@ phivec = 0;
 numpart = 125;
 partTraj = [];
 desirednumpart = 100;
-eachnumpart = round(desirednumpart/waypointsNum);
-numpart = eachnumpart*waypointsNum;
+eachnumpart = round(desirednumpart/wpsize);
+numpart = eachnumpart*wpsize;
 % RRT
 sampling_handle = @(limits) uniformresample(limits);
 radius = 0.3;
@@ -130,6 +101,34 @@ reached = 0;
 alph = 20;
 last = 0;   % stop robot when last waypoint is reached
 finishAll = 0;
+
+%% Load Map File Information
+% map
+map = 'compMap_mod.mat';
+mapstruct = importdata(map);
+mapdata = mapstruct.map;
+[mapsize,~] = size(mapdata);
+maxX = max([max(mapdata(:,1)) max(mapdata(:,3))]);
+maxY = max([max(mapdata(:,2)) max(mapdata(:,4))]);
+minX = min([min(mapdata(:,1)) min(mapdata(:,3))]);
+minY = min([min(mapdata(:,2)) min(mapdata(:,4))]);
+xrange = (maxX-minX);
+yrange = (maxY-minY);
+limits = [minX minY maxX maxY];
+
+% beacon
+beaconmat = mapstruct.beaconLoc;
+[beaconsize,~] = size(beaconmat);
+beconID = beaconmat(:,1);
+
+% waypoints
+goalp = mapstruct.waypoints;
+waypointsNum = size(goalp,1);
+midpoints = findOptWallMidpoint(mapstruct.optWalls);
+ECwaypoints = mapstruct.ECwaypoints;
+% goalp = [2.33 0.82;
+%          2.16 -1.03;
+%         -2.43 -0.5];
 
 %??????
 DRweight = 1;
@@ -207,7 +206,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
     %% #####################SAMPLING BEGIN####################### %%
     %% ########################################################## %%
     %% PARTICLES SAMPLING (SAMPLING STATE MACHINE)
-    %% STATE 0: SET INITIAL PARTICLES SET IN THE FIRST RUN
+    % STATE 0: SET INITIAL PARTICLES SET IN THE FIRST RUN
     if initsw == 0
         % Initialization
         dataStore.beacon = [0,0,-1,0,0,0];      % beacon data
@@ -215,23 +214,20 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
         turnSum = oriPose;                      % sum of angle turned
         spinDone = 0;                           % flag indicates spin finish
         
-        xprep = repmat(waypoints(:,1),1,eachnumpart);
-        xpart = reshape(xprep',[],1);
-        yprep = repmat(waypoints(:,2),1,eachnumpart);
-        ypart = reshape(yprep',[],1);
-        tprep = linspace(2*pi/eachnumpart,2*pi,eachnumpart);
-        thepart = repmat(tprep,1,waypointsNum)';
+        xpart = xrange*rand(numpart,1)+minX;    % Particle
+        ypart = yrange*rand(numpart,1)+minY;
+        thepart = 2*pi*rand(numpart,1);
         wi = ones(numpart,1)/numpart;
         dataStore.particles = [xpart ypart thepart wi];
         
-        % To STATE 1
+        % To STATE 2
         initsw = 1;
         % plot particles set
         %[a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
         
     
-    %% STATE 1: PF Waypoints INIT
-    elseif initsw == 1
+    % STATE 2: CALCULATE NEW PARTICLES SET
+    else
         ctrl = [dvec phivec];
         zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) deadreck(end,:)]';
         
@@ -241,21 +237,6 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
             mubar(2),mubar(3),ubar(1),ubar(2),noiseprofile);
         w_handle = @(xtpred,meas) findWeight(xtpred,mapdata,sensorOrigin,...
             angles,meas,beaconmat);
-        o_handle = @(PSet) offmap_detect(PSet,mapdata);
-        reinit_handle = @() resample(mapdata,numpart);
-        [M_final,Mt]= particleFilter(M_init,ctrl,zt,ctrl_handle,w_handle,o_handle,reinit_handle);
-        dataStore.particles = cat(3,dataStore.particles,M_final);
-    %% STATE 2: RUNNING PF
-    else
-        ctrl = [dvec phivec];
-        zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) deadreck(end,:)]';
-        
-        %% PF
-        M_init = dataStore.particles(:,:,end);
-        ctrl_handle = @(mubar,ubar) integrateOdom_dynamic(mubar(1),...
-            mubar(2),mubar(3),ubar(1),ubar(2),noiseprofile);
-        w_handle = @(xtpred,meas) findWeight_comp(xtpred,mapdata,sensorOrigin,...
-            angles,meas,beaconmat,DRweight);
         o_handle = @(PSet) offmap_detect(PSet,mapdata);
         reinit_handle = @() resample(mapdata,numpart);
         [M_final,Mt]= particleFilter(M_init,ctrl,zt,ctrl_handle,w_handle,o_handle,reinit_handle);
@@ -291,18 +272,18 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
     angVel = -0.4;
     [cmdV,cmdW] = limitCmds(fwdVel,angVel,0.49,0.13);
     
-    %% STATE 0: STOP ROBOT
+    % STATE 0: STOP ROBOT
     % if overhead localization loses the robot for too long, stop it
     if noRobotCount >= 3
         SetFwdVelAngVelCreate(CreatePort, 0,0);
-    %% STATE 1: SPIN BEFORE MOVE
+    % STATE 1: SPIN BEFORE MOVE
     elseif spinsw <= 1
-        %% STATE 1.1: START SPINNING (spinsw = 0)
+        % STATE 1.1: START SPINNING (spinsw = 0)
         if spinsw == 0
             SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW);
             turnSum = turnSum + dataStore.odometry(end,3);
             if nextwaypoint == 1 % first waypoint: spin 360 degree and stop when beacon seen
-                noiseprofile = [0 0 sqrt(pi/2)];
+                noiseprofile = [sqrt(0.2) sqrt(0.2) sqrt(0.2)];
                 DRweight = 0;
                 if abs(turnSum) >= 2*pi % 360 degree spinning
                     spinDone = 1;
@@ -315,11 +296,11 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
             else % following waypoint: spin until beacon seen
                 spinsw = spinsw+1;
             end          
-        %% STATE 1.2: KEEP SPINNING (spinsw = 1)
+        % STATE 1.2: KEEP SPINNING (spinsw = 1)
         else
-            %% STATE 1.2.1: STOP WHEN A BEACON IN VIEW
+            noiseprofile = [sqrt(0.15) sqrt(0.15) sqrt(0.15)];
+            % STATE 1.2.1: STOP WHEN A BEACON IN VIEW
             if dataStore.timebeacon(end,1) ~= -1
-                noiseprofile = [sqrt(0.01) sqrt(0.01) sqrt(0.1)];
                 disp("stopped and I see beacon!")
                 if startTimer == 0  % start counting staring sec
                     SetFwdVelAngVelCreate(CreatePort, 0, 0 );
@@ -330,9 +311,6 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
                         spinsw = spinsw + 1;  % spinsw: 1 -> 2
                         noiseprofile = [sqrt(0.005) sqrt(0.005) sqrt(0.1)];
                         DRweight = 3;
-                        initsw = 2; % launch PF running
-                    elseif toc - timer1 > 3
-                        initsw = 2;
                     end
                 end
             end
@@ -353,12 +331,12 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
             % RRT Planner
             if nextwaypoint < waypointsNum
                 nowp = [xpartmean,ypartmean];%deadreck(end,1:2);
-                [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,waypoints(nextwaypoint,:),stepsize,radius);
+                [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,goalp(nextwaypoint,:),stepsize,radius);
                 
                 % PLOT-----------------------------------
                 d=plot(pathpoints(:,1),pathpoints(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1]);
                 e=plot(nowp(1),nowp(2),'ko','MarkerFaceColor',[1 0 0]);
-                f=plot(waypoints(1),waypoints(2),'ko','MarkerFaceColor',[0 1 0]);
+                f=plot(goalp(1),goalp(2),'ko','MarkerFaceColor',[0 1 0]);
                 
                 rrtplan=1;
                 waypoints = pathpoints;
