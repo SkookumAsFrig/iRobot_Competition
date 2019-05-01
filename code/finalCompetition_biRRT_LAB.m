@@ -100,6 +100,7 @@ partTraj = [];
 
 %% Load Map & Beacon Information
 map = 'compMap_mod.mat';
+% map = 'compMap_big.mat';
 mapstruct = importdata(map);
 mapdata = mapstruct.map;
 beaconmat = mapstruct.beaconLoc;
@@ -121,13 +122,14 @@ eachnumpart = round(desirednumpart/wpsize);
 numpart = eachnumpart*wpsize;
 
 % goalp = [2.33 0.82];
-goalp = [-2.43 -0.5];
-% goalp = [2.16 -1.03];
+% goalp = [-2.43 -0.5];
+goalp = [2.16 -1.03];
 map = 'compMap_mod.mat';
 
 %goalp = [3 3];
 %goalp = [1.5 3.5];
 % goalp = [-3 3.5];
+% goalp = waypoints(1,:);
 % map = 'compMap_big.mat';
 
 limits = [minX minY maxX maxY];
@@ -139,7 +141,7 @@ oneshot = 0;
 
 %constants to initialize
 epsilon = 0.2;
-closeEnough = 0.05;
+closeEnough = 0.1;
 gotopt = 1;
 reached = 0;
 alph = 20;
@@ -160,6 +162,8 @@ for e=1:beaconsize
 end
 xlim([-3, 3]);
 ylim([-2.5, 2.5]);
+% xlim([-5, 5]);
+% ylim([-5, 5]);
 
 hold on
 % READ & STORE SENSOR DATA
@@ -227,7 +231,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         yprep = repmat(waypoints(:,2),1,eachnumpart);
         ypart = reshape(yprep',[],1);
         tprep = linspace(2*pi/eachnumpart,2*pi,eachnumpart);
-        thepart = repmat(tprep,1,3)';
+        thepart = repmat(tprep,1,wpsize)';
         wi = ones(numpart,1)/numpart;
         dataStore.particles = [xpart ypart thepart wi];
         % plot particles set
@@ -250,7 +254,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         reinit_handle = @() resample(mapdata,numpart);
         [M_final,Mt]= particleFilter_init(M_init,ctrl,zt,ctrl_handle,w_handle,o_handle,reinit_handle,eachnumpart);
         dataStore.particles = cat(3,dataStore.particles,M_final);
-        dataStore.debugparticles = cat(3,dataStore.debugparticles,Mt);
+        %dataStore.debugparticles = cat(3,dataStore.debugparticles,Mt);
     %% STATE 2: Running PF
     else
         ctrl = [dvec phivec];
@@ -266,7 +270,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         reinit_handle = @() resample(mapdata,numpart);
         [M_final,Mt]= particleFilter(M_init,ctrl,zt,ctrl_handle,w_handle,o_handle,reinit_handle);
         dataStore.particles = cat(3,dataStore.particles,M_final);
-        dataStore.debugparticles = cat(3,dataStore.debugparticles,Mt);
+        %dataStore.debugparticles = cat(3,dataStore.debugparticles,Mt);
     end
     
     xpartmean = mean(dataStore.particles(:,1,end));
