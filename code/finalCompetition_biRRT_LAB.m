@@ -3,7 +3,9 @@ function[dataStore] = finalCompetition_biRRT_LAB(CreatePort,DistPort,TagPort,tag
 % into somthing. If a bump sensor is triggered, command the robot to back
 % up 0.25m and turn clockwise 30 degs, before continuing to drive forward
 % again. Saves a datalog.
-%
+%RUN THIS [dataStore] = finalCompetition_biRRT_LAB(Ports.create,Ports.dist,Ports.tag,05)
+%SetFwdVelAngVelCreate(CreatePort, 0,0 );
+%Ports = CreatePiInit('C3PO')
 %   dataStore = backupBump(CreatePort,DistPort,TagPort,tagNum,maxTime) runs
 %
 %   INPUTStype
@@ -117,13 +119,13 @@ yrange = (maxY-minY);
 beconID = beaconmat(:,1);
 
 % particle number
-desirednumpart = 200;
+desirednumpart = 60;
 eachnumpart = round(desirednumpart/wpsize);
 numpart = eachnumpart*wpsize;
 
 % goalp = [2.33 0.82];
-% goalp = [-2.43 -0.5];
-goalp = [2.16 -1.03];
+goalp = [-2.43 -0.5];
+% goalp = [2.16 -1.03];
 map = 'compMap_mod.mat';
 
 %goalp = [3 3];
@@ -140,8 +142,8 @@ stepsize = 0.4;
 oneshot = 0;
 
 %constants to initialize
-epsilon = 0.2;
-closeEnough = 0.1;
+epsilon = 0.25;
+closeEnough = 0.3;
 gotopt = 1;
 reached = 0;
 alph = 20;
@@ -203,7 +205,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         seeBeacInd = 1;
     end
     
-    if seeBeacInd>7
+    if seeBeacInd>5
         xi = mean(dataStore.particles(:,1,end-1));
         yi = mean(dataStore.particles(:,2,end-1));
         thetai = mean(dataStore.particles(:,3,end-1));
@@ -315,8 +317,8 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         % KEEP SPINNING
         else
             % when a beacon in view then stop
-            if dataStore.timebeacon(end,1) ~= -1 %&& abs(dataStore.timebeacon(end,3)) <= 0.1
-                noiseprofile = [sqrt(0.01) sqrt(0.01) sqrt(0.1)];
+            if dataStore.timebeacon(end,1) ~= -1 && abs(dataStore.timebeacon(end,3)) <= 0.3
+                noiseprofile = [sqrt(0.05) sqrt(0.05) sqrt(0.1)];
                 disp("stopped and I see beacon!")
                 if startTimer == 0
                     SetFwdVelAngVelCreate(CreatePort, 0, 0 );
@@ -325,9 +327,10 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
                 else
                     if toc - timer1 > 10
                         spinsw = spinsw+1;  % spinsw: 1 -> 2
-                        noiseprofile = [sqrt(0.003) sqrt(0.003) sqrt(0.1)];
+                        noiseprofile = [sqrt(0.001) sqrt(0.001) sqrt(0.01)];
                         initsw = 2;
                         DRweight = 3;
+
                     elseif toc - timer1 > 3
                         initsw = 2;
                     end
@@ -336,6 +339,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
             
         end
     else
+        
         if oneshot==0
             figure(2)
             hold on
@@ -343,7 +347,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
                 a=plot([mapdata(j,1) mapdata(j,3)],[mapdata(j,2) mapdata(j,4)],'LineWidth',2,'Color','k','HandleVisibility','off');
             end
             axis equal
-            nowp = deadreck(end,1:2);
+            nowp = [xpartmean ypartmean];
             [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,goalp,stepsize,radius);
             
             d=plot(pathpoints(:,1),pathpoints(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1]);
@@ -374,7 +378,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         end
         %run visitWaypoints
         [vout,wout,reached] = visitWaypoints(waypoints,gotopt,closeEnough,epsilon, alph, x, y, theta);
-        [cmdV,cmdW] = limitCmds(vout,wout,0.2,0.13);
+        [cmdV,cmdW] = limitCmds(vout,wout,0.1,0.13);
         
         % PRINT-----------------------------------
         disp(['cmdV is ' num2str(cmdV)])
