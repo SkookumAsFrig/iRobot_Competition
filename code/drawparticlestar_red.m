@@ -26,7 +26,7 @@ function [a, b] = drawparticlestar_red(x,y,theta)
 %   SHI, KOWIN
 
 a = plot(x,y,'kp','MarkerSize',15,'MarkerFaceColor','r');
-hold on
+drawnow;
 ptrlength = 0.5;
 endptx = x+ptrlength*cos(theta);
 endpty = y+ptrlength*sin(theta);
