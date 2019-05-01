@@ -1,6 +1,6 @@
 clc
-clear all
-load('beaconPredicttestData2.mat')
+%clear all
+load('beaconPredicttestData3.mat')
 %gg = {robotPose,sensorOrigin,map,n,beaconmat,m};
 robotPose = gg{1};
 sensorOrigin = gg{2};

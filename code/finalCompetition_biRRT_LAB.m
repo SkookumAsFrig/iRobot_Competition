@@ -57,6 +57,7 @@ dataStore = struct('truthPose', [],...
     'deadReck', [], ...
     'ekfMu', [], ...
     'ekfSigma', [],...
+    'debugparticles', [],...
     'particles', []);
 
 %% Initialize Condition Variables
@@ -94,8 +95,6 @@ angles = linspace(27*pi/180,-27*pi/180,9);
 % odometry vector
 dvec = 0;
 phivec = 0;
-% particle number
-numpart = 125;
 
 partTraj = [];
 
@@ -105,7 +104,8 @@ mapstruct = importdata(map);
 mapdata = mapstruct.map;
 beaconmat = mapstruct.beaconLoc;
 [beaconsize,~] = size(beaconmat);
-mapdata = mapstruct.map;
+waypoints = mapstruct.waypoints;
+[wpsize,~] = size(waypoints);
 [mapsize,~] = size(mapdata);
 maxX = max([max(mapdata(:,1)) max(mapdata(:,3))]);
 maxY = max([max(mapdata(:,2)) max(mapdata(:,4))]);
@@ -115,7 +115,14 @@ xrange = (maxX-minX);
 yrange = (maxY-minY);
 beconID = beaconmat(:,1);
 
-goalp = [2.33 0.82];
+% particle number
+desirednumpart = 200;
+eachnumpart = round(desirednumpart/wpsize);
+numpart = eachnumpart*wpsize;
+
+% goalp = [2.33 0.82];
+goalp = [-2.43 -0.5];
+% goalp = [2.16 -1.03];
 map = 'compMap_mod.mat';
 
 %goalp = [3 3];
@@ -132,7 +139,7 @@ oneshot = 0;
 
 %constants to initialize
 epsilon = 0.2;
-closeEnough = 0.1;
+closeEnough = 0.05;
 gotopt = 1;
 reached = 0;
 alph = 20;
@@ -192,7 +199,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         seeBeacInd = 1;
     end
     
-    if seeBeacInd>5
+    if seeBeacInd>7
         xi = mean(dataStore.particles(:,1,end-1));
         yi = mean(dataStore.particles(:,2,end-1));
         thetai = mean(dataStore.particles(:,3,end-1));
@@ -215,17 +222,36 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         turnSum = oriPose;
         spinTwo = 0;
         % init PF
-        xpart = xrange*rand(numpart,1)+minX;
-        ypart = yrange*rand(numpart,1)+minY;
-        thepart = 2*pi*rand(numpart,1);
+        xprep = repmat(waypoints(:,1),1,eachnumpart);
+        xpart = reshape(xprep',[],1);
+        yprep = repmat(waypoints(:,2),1,eachnumpart);
+        ypart = reshape(yprep',[],1);
+        tprep = linspace(2*pi/eachnumpart,2*pi,eachnumpart);
+        thepart = repmat(tprep,1,3)';
         wi = ones(numpart,1)/numpart;
         dataStore.particles = [xpart ypart thepart wi];
         % plot particles set
         %[a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
         
-        % to STATE 2
+        % to STATE 1
         initsw = 1;
-    %% STATE 2:
+    %% STATE 1: PF Waypoints INIT
+    elseif initsw == 1
+        ctrl = [dvec phivec];
+        zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) deadreck(end,:)]';
+        
+        %% PF
+        M_init = dataStore.particles(:,:,end);
+        ctrl_handle = @(mubar,ubar) integrateOdom_dynamic(mubar(1),...
+            mubar(2),mubar(3),ubar(1),ubar(2),noiseprofile);
+        w_handle = @(xtpred,meas) findWeight_comp(xtpred,mapdata,sensorOrigin,...
+            angles,meas,beaconmat,DRweight);
+        o_handle = @(PSet) offmap_detect(PSet,mapdata);
+        reinit_handle = @() resample(mapdata,numpart);
+        [M_final,Mt]= particleFilter_init(M_init,ctrl,zt,ctrl_handle,w_handle,o_handle,reinit_handle,eachnumpart);
+        dataStore.particles = cat(3,dataStore.particles,M_final);
+        dataStore.debugparticles = cat(3,dataStore.debugparticles,Mt);
+    %% STATE 2: Running PF
     else
         ctrl = [dvec phivec];
         zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) deadreck(end,:)]';
@@ -234,12 +260,13 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         M_init = dataStore.particles(:,:,end);
         ctrl_handle = @(mubar,ubar) integrateOdom_dynamic(mubar(1),...
             mubar(2),mubar(3),ubar(1),ubar(2),noiseprofile);
-        w_handle = @(xtpred,meas) findWeight(xtpred,mapdata,sensorOrigin,...
-            angles,meas,beaconmat);
+        w_handle = @(xtpred,meas) findWeight_comp(xtpred,mapdata,sensorOrigin,...
+            angles,meas,beaconmat,DRweight);
         o_handle = @(PSet) offmap_detect(PSet,mapdata);
         reinit_handle = @() resample(mapdata,numpart);
         [M_final,Mt]= particleFilter(M_init,ctrl,zt,ctrl_handle,w_handle,o_handle,reinit_handle);
-        dataStore.particles = cat(3,dataStore.particles,M_final);        
+        dataStore.particles = cat(3,dataStore.particles,M_final);
+        dataStore.debugparticles = cat(3,dataStore.debugparticles,Mt);
     end
     
     xpartmean = mean(dataStore.particles(:,1,end));
@@ -270,12 +297,12 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
     elseif spinsw <= 1
         % START SPINNING
         if spinsw == 0
-            noiseprofile = [sqrt(2) sqrt(2) sqrt(2)];
+            noiseprofile = [0 0 sqrt(pi/2)];
             DRweight = 0;
             SetFwdVelAngVelCreate(CreatePort, cmdV2, cmdW2 );
             turnSum = turnSum + dataStore.odometry(end,3);
             % 360 degree spinning
-            if abs(turnSum) >= 2*pi
+            if abs(turnSum) >= 0.1*pi
                 spinTwo = 1;
             end
             if(spinTwo == 1)
@@ -283,19 +310,22 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
             end
         % KEEP SPINNING
         else
-            noiseprofile = [sqrt(0.3) sqrt(0.3) sqrt(0.3)];
             % when a beacon in view then stop
-            if dataStore.timebeacon(end,1) ~= -1
+            if dataStore.timebeacon(end,1) ~= -1 %&& abs(dataStore.timebeacon(end,3)) <= 0.1
+                noiseprofile = [sqrt(0.01) sqrt(0.01) sqrt(0.1)];
                 disp("stopped and I see beacon!")
                 if startTimer == 0
                     SetFwdVelAngVelCreate(CreatePort, 0, 0 );
                     timer1 = toc;
                     startTimer = 1;
                 else
-                    if toc - timer1 > 6
+                    if toc - timer1 > 10
                         spinsw = spinsw+1;  % spinsw: 1 -> 2
-                        noiseprofile = [sqrt(0.005) sqrt(0.005) sqrt(0.1)];
+                        noiseprofile = [sqrt(0.003) sqrt(0.003) sqrt(0.1)];
+                        initsw = 2;
                         DRweight = 3;
+                    elseif toc - timer1 > 3
+                        initsw = 2;
                     end
                 end
             end
@@ -303,7 +333,6 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         end
     else
         if oneshot==0
-            %dataStore.timebeacon = [0,0,-1,0,0,0];
             figure(2)
             hold on
             for j=1:mapsize
@@ -341,7 +370,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         end
         %run visitWaypoints
         [vout,wout,reached] = visitWaypoints(waypoints,gotopt,closeEnough,epsilon, alph, x, y, theta);
-        [cmdV,cmdW] = limitCmds(vout,wout,0.1,0.13);
+        [cmdV,cmdW] = limitCmds(vout,wout,0.2,0.13);
         
         % PRINT-----------------------------------
         disp(['cmdV is ' num2str(cmdV)])

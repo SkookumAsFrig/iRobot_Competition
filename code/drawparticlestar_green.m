@@ -27,7 +27,7 @@ function [a, b] = drawparticlestar_green(x,y,theta)
 
 a = plot(x,y,'kp','MarkerSize',15,'MarkerFaceColor','g');
 hold on
-ptrlength = 0.5;
+ptrlength = 0.25;
 endptx = x+ptrlength*cos(theta);
 endpty = y+ptrlength*sin(theta);
 b = plot([x endptx],[y endpty],'k','LineWidth',2);
