@@ -38,11 +38,7 @@ else
     elseif kNearest == 1
         for i = 2:waypointsNum
             point = [waypoints(i,1),waypoints(i,2)];
-            temp = findEuclideanDistance(robot_xy,point);
-            if temp < d
-               d = temp;
-               pointSet = point;
-            end
+            d = [d; findEuclideanDistance(robot_xy,point)];
         end
     else
         pointSet = robot_xy+robot_xy;
