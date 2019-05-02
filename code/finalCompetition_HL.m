@@ -57,7 +57,7 @@ dataStore = struct('truthPose', [],...
 
 %% Load Map File Information
 % map
-map = 'compMap.mat';
+map = 'compMap_mod.mat';
 mapstruct = importdata(map);
 mapdata = mapstruct.map;
 [mapsize,~] = size(mapdata);
@@ -118,14 +118,15 @@ phivec = 0;
 %% PF
 partTraj = [];
 DRweight = 0;
-desirednumpart = 150;
-eachnumpart = round(desirednumpart/waypointsNum);
+eachnumpart = 30;
 numpart = eachnumpart*waypointsNum;
 noiseprofile = [0 0 sqrt(0.5)];
+%For initialization wait second stage time
+inititer = 0;
 %% RRT
 sampling_handle = @(limits) uniformresample(limits);
 radius = 0.25;
-stepsize = 0.18;
+stepsize = 0.2;
 rrtplan = 0;
 %% Visit waypoints
 epsilon = 0.2;
@@ -235,7 +236,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
         %[a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
         
         
-        %% STATE 1: PF Waypoints INIT
+    %% STATE 1: PF Waypoints INIT
     elseif initsw == 1
         ctrl = [dvec phivec];
         zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) deadreck(end,:)]';
@@ -250,7 +251,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
         reinit_handle = @() resample(mapdata,numpart);
         [M_final,Mt]= particleFilter_init(M_init,ctrl,zt,ctrl_handle,w_handle,o_handle,reinit_handle,eachnumpart);
         dataStore.particles = cat(3,dataStore.particles,M_final);
-        %% STATE 2: RUNNING PF
+    %% STATE 2: RUNNING PF
     else
         ctrl = [dvec phivec];
         zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) deadreck(end,:)]';
@@ -293,7 +294,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
     %% ROBOT CONTROL(CONTROL STATE MACHINE)
     % Set rotate velocity
     fwdVel = 0;
-    angVel = -0.4;
+    angVel = -0.1;
     [cmdV,cmdW] = limitCmds(fwdVel,angVel,0.49,0.13);
     
     %% STATE 0: STOP ROBOT
@@ -309,7 +310,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
             noiseprofile = [0 0 sqrt(pi/2)];
             if nextwaypoint == 1 % first waypoint: spin 360 degree and stop when beacon seen
                 DRweight = 0;
-                if abs(turnSum) >= 2*pi % 360 degree spinning
+                if abs(turnSum) >= 0.1*pi % 360 degree spinning
                     spinDone = 1;
                     turnSum = 0;
                 end
@@ -323,8 +324,9 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
         %% STATE 1.2: KEEP SPINNING (spinsw = 1)
         else
             %% STATE 1.2.1: STOP WHEN A BEACON IN VIEW
-            if dataStore.timebeacon(end,1) ~= -1 && abs(dataStore.timebeacon(end,3)) <= 0.3
-                noiseprofile = [sqrt(0.05) sqrt(0.05) sqrt(0.1)];
+            if dataStore.timebeacon(end,1) ~= -1 %%&& abs(dataStore.timebeacon(end,3)) <= 0.3
+                noiseprofile = [sqrt(0.005) sqrt(0.005) sqrt(pi/2)];
+                inititer = inititer+1;
                 disp("stopped and I see beacon!")
                 if startTimer == 0  % start counting staring sec
                     SetFwdVelAngVelCreate(CreatePort, 0, 0 );
@@ -332,12 +334,15 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
                     startTimer = 1;
                 else % staring time up
                     if toc - timer1 > 10
+                        disp("10 seconds passed")
                         spinsw = spinsw + 1;  % spinsw: 1 -> 2
-                        noiseprofile = [sqrt(0.001) sqrt(0.001) sqrt(0.01)];
-                        DRweight = 3;
+                        noiseprofile = [sqrt(0.005) sqrt(0.005) sqrt(0.05)];
+                        DRweight = 0.0001;
                         seeTimes = 10;
                         initsw = 2; % launch PF running
-                    elseif toc - timer1 > 3
+                    elseif toc - timer1 > 5 || inititer > 1
+                        disp("first stage passed")
+                        DRweight = 0;
                         initsw = 2;
                     end
                 end
@@ -358,17 +363,18 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
             
             % RRT Planner
             if nextwaypoint <= size(waypoints)%waypointsNum
+                currwp = waypoints(nextwaypoint,:);
                 nowp = robotestimate(1,1:2);%deadreck(end,1:2);
-                [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,waypoints(nextwaypoint,:),stepsize,radius);
+                [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,currwp,stepsize,radius);
                 
                 % PLOT-----------------------------------
                 d=plot(pathpoints(:,1),pathpoints(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1]);
                 e=plot(nowp(1),nowp(2),'ko','MarkerFaceColor',[1 0 0]);
-                f=plot(waypoints(1),waypoints(2),'ko','MarkerFaceColor',[0 1 0]);
+                f=plot(currwp(1),currwp(2),'ko','MarkerFaceColor',[0 1 0]);
                 
                 rrtplan=1;
-                waypoints = pathpoints;
-                [m,~] = size(waypoints);
+                wpts = pathpoints;
+                [m,~] = size(wpts);
             else
                 finishAll = 1;
             end
@@ -387,9 +393,10 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
             else
                 if reached==1 && gotopt~=m
                     %if reached current waypoint, increment index and reset reached
+                    closeEnough = 0.3;
                     gotopt = gotopt+1;
                     reached = 0;
-                    if gotopt == m-7
+                    if gotopt == m-6
                         closeEnough = 0.05;
                     end
                 elseif gotopt==m && reached==1
@@ -397,7 +404,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
                     last = 1;
                 end
                 %run visitWaypoints
-                [vout,wout,reached] = visitWaypoints(waypoints,gotopt,closeEnough,epsilon, alph, x, y, theta);
+                [vout,wout,reached] = visitWaypoints(wpts,gotopt,closeEnough,epsilon, alph, x, y, theta);
                 [cmdV,cmdW] = checkCmd(vout,wout,0.1,0.13);
                               
                 if last==1
