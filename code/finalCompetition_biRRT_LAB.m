@@ -125,8 +125,8 @@ eachnumpart = 60;
 numpart = eachnumpart*wpsize;
 
 % goalp = [2.33 0.82];
-% goalp = [-2.43 -0.5];
-goalp = [2.16 -1.03];
+goalp = [-2.43 -0.5];
+% goalp = [2.16 -1.03];
 % map = 'compMap_mod.mat';
 
 %goalp = [3 3];
@@ -338,7 +338,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
                         initsw = 2;
                         DRweight = 0.0001;
                         DRPFconv_iter = 10;
-                    elseif toc - timer1 > 5 || inititer > 2
+                    elseif toc - timer1 > 5 || inititer > 1
                         disp("first stage passed")
                         DRweight = 0;
                         initsw = 2;
@@ -381,7 +381,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
             %if reached current waypoint, increment index and reset reached
             gotopt = gotopt+1;
             reached = 0;
-            if gotopt == m-7
+            if gotopt == m-5
                 closeEnough = 0.05;
             end
         elseif gotopt==m && reached==1
