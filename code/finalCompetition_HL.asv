@@ -382,7 +382,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
             if (realWall == 1)
                 % prepare to backup & replan
                 rrtplan = 2;  
-                cmdV_back = -0.15;
+                cmdV_back = -cmdV;
                 backTime = toc;
             else
                 if reached==1 && gotopt~=m
@@ -418,8 +418,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
             if (toc-backTime)>3
                 SetFwdVelAngVelCreate(CreatePort, 0, 0);
                 initsw = 1;
-                spinsw = 0;
-                rrtplan = 0;
+                rrtplan==0
             end   
         end
     end
