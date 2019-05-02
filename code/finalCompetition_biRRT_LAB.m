@@ -176,7 +176,7 @@ hold on
 deadreck = [minX+xrange/2 minY+yrange/2 0];
 noiseprofile = [0 0 sqrt(0.5)];
 
-DRPFconv_iter = 2;
+seeTimes = 2;
 
 %% RUNNING LOOP
 while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REACHED
@@ -209,7 +209,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         seeBeacInd = 0;
     end
     
-    if seeBeacInd>DRPFconv_iter
+    if seeBeacInd>seeTimes
         xi = mean(dataStore.particles(:,1,end-1));
         yi = mean(dataStore.particles(:,2,end-1));
         thetai = mean(dataStore.particles(:,3,end-1));
@@ -337,7 +337,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
                         noiseprofile = [sqrt(0.001) sqrt(0.001) sqrt(0.01)];
                         initsw = 2;
                         DRweight = 0.0001;
-                        DRPFconv_iter = 10;
+                        seeTimes = 10;
                     elseif toc - timer1 > 5 || inititer > 1
                         disp("first stage passed")
                         DRweight = 0;
@@ -364,8 +364,8 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
             f=plot(goalp(1),goalp(2),'ko','MarkerFaceColor',[0 1 0]);
             
             oneshot=1;
-            waypoints = pathpoints;
-            [m,~] = size(waypoints);
+            wpts = pathpoints;
+            [m,~] = size(wpts);
         end
         
         % Get current pose
@@ -389,7 +389,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
             last = 1;
         end
         %run visitWaypoints
-        [vout,wout,reached] = visitWaypoints(waypoints,gotopt,closeEnough,epsilon, alph, x, y, theta);
+        [vout,wout,reached] = visitWaypoints(wpts,gotopt,closeEnough,epsilon, alph, x, y, theta);
         [cmdV,cmdW] = limitCmds(vout,wout,0.2,0.13);
         
         % PRINT-----------------------------------
