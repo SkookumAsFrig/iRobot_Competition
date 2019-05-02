@@ -118,9 +118,10 @@ phivec = 0;
 %% PF
 partTraj = [];
 DRweight = 0;
-eachnumpart = 30;
+eachnumpart = 70;
 numpart = eachnumpart*waypointsNum;
-noiseprofile = [0 0 sqrt(0.5)];
+% noiseprofile = [0 0 sqrt(0.5)];
+noiseprofile = [sqrt(0.1) sqrt(0.1) sqrt(0.5)];
 %For initialization wait second stage time
 inititer = 0;
 %% RRT
@@ -203,6 +204,8 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
     end
     
     % GET ODOMETRY DATA
+    dvec = dataStore.odometry(end,2);
+    phivec = dataStore.odometry(end,3);
     newstate = integrateOdom_onestep(xi, yi, thetai, dvec, phivec);
     deadreck = [deadreck; newstate'];
     % ###############SENSOR DATA PROCESS END################## %
