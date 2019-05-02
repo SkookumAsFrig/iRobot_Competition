@@ -89,7 +89,7 @@ spinsw = 0; % inner state switch flag {0---Star spin;
                                       %2---Stare at beacon done}
 startTimer = 0; % 3-second timer launch flag
 
-seeBeacInd = 1;
+seeBeacInd = 0;
 
 %% Initialize Configuration Variables
 sensorOrigin = [0.13 0];
@@ -119,14 +119,14 @@ yrange = (maxY-minY);
 beconID = beaconmat(:,1);
 
 % particle number
-desirednumpart = 60;
+desirednumpart = 150;
 eachnumpart = round(desirednumpart/wpsize);
 numpart = eachnumpart*wpsize;
 
 % goalp = [2.33 0.82];
 goalp = [-2.43 -0.5];
 % goalp = [2.16 -1.03];
-map = 'compMap_mod.mat';
+% map = 'compMap_mod.mat';
 
 %goalp = [3 3];
 %goalp = [1.5 3.5];
@@ -137,19 +137,19 @@ map = 'compMap_mod.mat';
 limits = [minX minY maxX maxY];
 %sampling_handle = @(limits,lastind) lowdisp_resample(limits,lastind);
 sampling_handle = @(limits) uniformresample(limits);
-radius = 0.3;
-stepsize = 0.4;
+radius = 0.25;
+stepsize = 0.15;
 oneshot = 0;
 
 %constants to initialize
-epsilon = 0.25;
+epsilon = 0.2;
 closeEnough = 0.3;
 gotopt = 1;
 reached = 0;
 alph = 20;
 %last is to stop robot when last waypoint is reached
 last = 0;
-DRweight = 1;
+DRweight = 0;
 
 tic
 
@@ -172,7 +172,9 @@ hold on
 [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
 %deadreck = dataStore.truthPose(1,2:4);
 deadreck = [minX+xrange/2 minY+yrange/2 0];
-noiseprofile = [sqrt(0.5) sqrt(0.5) sqrt(0.5)];
+noiseprofile = [0 0 sqrt(0.5)];
+
+DRPFconv_iter = 2;
 
 %% RUNNING LOOP
 while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REACHED
@@ -197,19 +199,19 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
     
     % GET ODOMETRY DATA
     dvec = dataStore.odometry(end,2);
-    phivec = 1.05*dataStore.odometry(end,3);
+    phivec = dataStore.odometry(end,3);
     
     if dataStore.timebeacon(end,1)~=-1
         seeBeacInd = seeBeacInd+1;
     else
-        seeBeacInd = 1;
+        seeBeacInd = 0;
     end
     
-    if seeBeacInd>5
+    if seeBeacInd>DRPFconv_iter
         xi = mean(dataStore.particles(:,1,end-1));
         yi = mean(dataStore.particles(:,2,end-1));
         thetai = mean(dataStore.particles(:,3,end-1));
-        seeBeacInd = 1;
+        seeBeacInd = 0;
     else
         xi = deadreck(end,1);
         yi = deadreck(end,2);
@@ -330,7 +332,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
                         noiseprofile = [sqrt(0.001) sqrt(0.001) sqrt(0.01)];
                         initsw = 2;
                         DRweight = 3;
-
+                        DRPFconv_iter = 10;
                     elseif toc - timer1 > 3
                         initsw = 2;
                     end
@@ -372,6 +374,9 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
             %if reached current waypoint, increment index and reset reached
             gotopt = gotopt+1;
             reached = 0;
+            if gotopt == m-7
+                closeEnough = 0.05;
+            end
         elseif gotopt==m && reached==1
             %if last one reached, flag last
             last = 1;
@@ -406,9 +411,12 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
     hold on
     [x, z, c, v] = drawparticlestar(dataStore.truthPose(end,2),dataStore.truthPose(end,3),dataStore.truthPose(end,4));
     [h, i] = drawparticlestar_red(xpartmean,ypartmean,tpartmean);
+    [qw, wq] = drawparticlestar_green(deadreck(end,1),deadreck(end,2),deadreck(end,3));
     
     pause(0.1);
     
+    delete(qw);
+    delete(wq);
     delete(h);
     delete(i);
     delete(c);
