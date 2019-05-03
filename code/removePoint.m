@@ -23,6 +23,10 @@ function waypoints = removePoint(pose,waypoints)
     if opt == 0
         waypoints(removeID,:) = [];
     else
-        waypoints(removeID:removeID+1,:) = [];
+        if mod(i,2)==1 % odd idx
+            waypoints(removeID:removeID+1,:) = [];
+        else % even idx
+            waypoints(removeID-1:removeID,:) = [];
+        end
     end
 end
