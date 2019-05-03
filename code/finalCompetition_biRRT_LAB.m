@@ -329,7 +329,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         else
             % when a beacon in view then stop
             turnSum = turnSum + dataStore.odometry(end,3);
-            if dataStore.timebeacon(end,1) ~= -1 %&& abs(dataStore.timebeacon(end,3)) <= 0.2
+            if dataStore.timebeacon(end,1) ~= -1 && abs(dataStore.timebeacon(end,3)) <= 0.15
                 noiseprofile = [sqrt(0.005) sqrt(0.005) sqrt(pi/2)];
                 inititer = inititer+1;
                 disp("stopped and I see beacon!")
