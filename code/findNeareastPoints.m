@@ -10,18 +10,16 @@ function pointSet = findNeareastPoints(pose,waypoints,kNearest)
 %           pointSet    k x 2
 %
 robot_xy = [pose(1),pose(2)];
-robot_theta=pose(3);
-point = [waypoints(1,1),waypoints(1,2)];
+firstPt = [waypoints(1,1),waypoints(1,2)];
 [waypointsNum,~] = size(waypoints);
-cross = [];
-wallID = [];
+
 if kNearest > waypointsNum
     pointSet = robot_xy;
     disp("ERROR_1: k value is larger than waypoints number");
 elseif kNearest == waypointsNum
     pointSet = waypoints;
 else
-    d = findEuclideanDistance(robot_xy,point);
+    d = findEuclideanDistance(robot_xy,firstPt);
     if kNearest > 1
         for i = 2:waypointsNum
             point = [waypoints(i,1),waypoints(i,2)];
@@ -42,6 +40,8 @@ else
             if temp < d
                d = temp;
                pointSet = point;
+            else
+               pointSet = firstPt;
             end
         end
     else

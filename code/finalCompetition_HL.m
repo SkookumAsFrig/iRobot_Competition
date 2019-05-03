@@ -83,12 +83,14 @@ waypoints = mapstruct.waypoints;
 wptsNum = size(waypoints,1);
 wallMidpoints = findOptWallMidpoint(mapstruct.optWalls);
 wallMptsNum = size(wallMidpoints,1);
+wallTwinPts = findOptWallTwinPts(mapstruct.optWalls,0.3);
+twinPtsNum = size(wallTwinPts,1);
 ECwaypoints = mapstruct.ECwaypoints;
 ECwptsNum = size(ECwaypoints,1);
 %% All Waypoints Set
 wpts_combo = [waypoints, ones(wptsNum,1);
-              ECwaypoints, 2*ones(ECwptsNum,1)];
-%               wallMidpoints, 3*ones(wallMptsNum,1)];
+              ECwaypoints, 2*ones(ECwptsNum,1);
+              wallTwinPts, 3*ones(twinPtsNum,1)];
 wpts_go = wpts_combo;
 % goalp = [2.33 0.82;
 %          2.16 -1.03;
@@ -121,14 +123,14 @@ realWall = 0;
 backTime = 0;
 backupFlag = 0;
 % RSDepth
-sensorOrigin = [0.13 0];
+sensorOrigin = [0.11 0.06];
 angles = linspace(27*pi/180,-27*pi/180,9);
 % Odometry
 dvec = 0;
 phivec = 0;
 %% PF
 partTraj = [];
-eachnumpart = 70;
+eachnumpart = 40;
 numpart = eachnumpart*wptsNum;
 % RRT
 sampling_handle = @(limits) uniformresample(limits);
@@ -136,14 +138,14 @@ radius = 0.25;
 stepsize = 0.2;
 rrtplan = 0;
 %% Visit waypoints
-epsilon = 0.2;
+epsilon = 0.2; %0.6
 closeEnough = 0.3;
 gotopt = 1;
 reached = 0;
 alph = 20;
 last = 0;   % stop robot when last waypoint is reached
 finishAll = 0;
-%??????
+
 DRweight = 0;
 
 %For initialization wait second stage time
@@ -151,7 +153,7 @@ inititer = 0;
 
 %% Back & Turn
 cmdV_back = -0.1;
-cmdW_turn = 0.15;
+cmdW_turn = -0.2;
 backStart = 0;
 turnStart = 0;
 stillBump = [];
@@ -182,8 +184,6 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
     %% ###############SENSOR DATA PROCESS BEGIN################## %%
     %% ########################################################## %%
     %% SENSOR DATA PROCESS
-    % CHECK BUMP SENSOR
-    [realWall] = checkOptionalWalls(dataStore.bump(end,:));
     
     % CHECK BEACON SEEN OR NOT
     [q,~] = size(dataStore.beacon);
@@ -220,7 +220,10 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
         thetai = dataStore.deadreck(end,3);
     end
     
-    % GET ODOMETRY DATA 
+    % CHECK BUMP SENSOR
+    [realWall] = checkOptionalWalls(dataStore.bump(end,:));
+    
+    % GET ODOMETRY DATA & store deadreck
     dvec = dataStore.odometry(end,2);
     phivec = dataStore.odometry(end,3);
     newstate = integrateOdom_onestep(xi, yi, thetai, dvec, phivec);
@@ -234,6 +237,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
     %% PARTICLES SAMPLING (SAMPLING STATE MACHINE)
     %% STATE 0: SET INITIAL PARTICLES SET IN THE FIRST RUN
     if initsw == 0
+        disp("first run");
         % Initialization
         dataStore.beacon = [0,0,-1,0,0,0];      % beacon data
         oriPose = dataStore.odometry(1,3);      % current robot direction
@@ -258,6 +262,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
         
         %% STATE 1: PF Waypoints INIT
     elseif initsw == 1
+        disp("PF init");
         ctrl = [dvec phivec];
         zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) dataStore.deadreck(end,:)]';
         
@@ -273,6 +278,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
         dataStore.particles = cat(3,dataStore.particles,M_final);
         %% STATE 2: RUNNING PF
     else
+        disp("running PF");
         ctrl = [dvec phivec];
         zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) dataStore.deadreck(end,:)]';
         
@@ -326,6 +332,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
     elseif spinsw <= 1
         %% STATE 1.1: START SPINNING (spinsw = 0)
         if spinsw == 0
+            disp("waypoint spinning");
             SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW);
             spinSum = spinSum + dataStore.odometry(end,3);
             noiseprofile = [0 0 sqrt(pi/2)];
@@ -358,8 +365,8 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
                     if toc - timer1 > 10
                         disp("10 seconds passed")
                         spinsw = spinsw + 1;  % spinsw: 1 -> 2
-                        noiseprofile = [sqrt(0.005) sqrt(0.005) sqrt(0.05)];
-                        DRweight = 0.0001;
+                        noiseprofile = [sqrt(0.002) sqrt(0.002) sqrt(0.01)];
+                        DRweight = 0.000005;
                         initsw = 2; % launch PF running
                         seeTimes = 10;
                     elseif toc - timer1 > 5 || inititer > 1
@@ -368,6 +375,8 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
                         initsw = 2;
                     end
                 end
+            else
+                disp("no beacon in view!");
             end
         end
     %% STATE 2: MOVE
@@ -386,11 +395,12 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
             % BE CAREFUL NOT START FROM WAYPOINTS!!!!!!! NEED EXTRA
             % CONDITION
             % eliminate the start point from the whole set
-            wpts_go = removePoint(robotestimate,wpts_go);
-
+            if size(wpts_go > 1)
+                wpts_go = removePoint(robotestimate,wpts_go);
+            end
             
             % RRT Planner
-            if nextwaypoint <= size(wpts_go)%waypointsNum
+            if ~isempty(wpts_go)%nextwaypoint <= size(wpts_go)
                 % currwp = wpts_go(nextwaypoint,1:2);    
                 currwp = findNeareastPoints(robotestimate(1,1:3),wpts_go,1);
                 nowp = robotestimate(1,1:2);%deadreck(end,1:2);
@@ -417,7 +427,8 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
             if realWall == 1
                 % prepare to backup & replan
                 rrtplan = 2;  
-                backStart = 1;
+                backStart = 1;  % back up
+                turnStart = 0;  % no turn
                 backSum = 0;
                 turnSum = 0;
             else
@@ -426,8 +437,8 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
                     closeEnough = 0.3;
                     gotopt = gotopt+1;
                     reached = 0;
-                    if gotopt > m-6
-                        closeEnough = 0.05;
+                    if gotopt > m-5
+                        closeEnough = 0.15;
                     end
                 elseif gotopt==m && reached==1
                     %if last one reached, flag last
@@ -435,14 +446,15 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
                 end
                 %run visitWaypoints
                 [vout,wout,reached] = visitWaypoints(wpts,gotopt,closeEnough,epsilon, alph, x, y, theta);
-                [cmdV,cmdW] = checkCmd(vout,wout,0.1,0.13);
+                [cmdV,cmdW] = checkCmd(vout,wout,0.07,0.13);
                               
                 if last==1
-                    %stop robot if last one reached
+                    %stop robot if waypoint reached
                     cmdV=0;
                     cmdW=0;
                     last = 0;
                     spinsw = 0; % spin again
+                    startTimer = 0; % reset timer
                     rrtplan= 0; % rrt plan again
                     nextwaypoint = nextwaypoint+1;  % next waypoint
                     gotopt = 1;                     % go to point again
@@ -464,16 +476,22 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
                 SetFwdVelAngVelCreate(CreatePort, 0, cmdW_turn);
                 turnSum = turnSum + dataStore.odometry(end,3);
                 stillBump = [stillBump,realWall];
-                if turnSum > pi/2
+                backStart = 0;
+                if turnSum > pi/4
                     SetFwdVelAngVelCreate(CreatePort, 0, 0);
                     if sum(stillBump) > 0 % check bump sensor again
                          backStart = 1;
                          turnStart = 0;
+                         disp("bump again!");
                     else 
+                        backStart = 1;
                         turnStart = 0;
                         initsw = 1;
                         spinsw = 0;
+                        startTimer = 0;
                         rrtplan = 0;
+                        inititer = 0;
+                        disp("replanning");
                     end
                 end
             end
