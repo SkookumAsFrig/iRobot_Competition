@@ -101,7 +101,7 @@ phivec = 0;
 partTraj = [];
 
 %% Load Map & Beacon Information
-map = 'compMap_nobeacon.mat';
+map = 'compMap_mod.mat';
 % map = 'compMap_big.mat';
 mapstruct = importdata(map);
 mapdata = mapstruct.map;
@@ -154,7 +154,6 @@ DRweight = 0;
 inititer = 0;
 
 accum_initw = zeros(wpsize,1);
-onetime = 0;
 
 tic
 
@@ -212,11 +211,10 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         seeBeacInd = 0;
     end
     
-    if seeBeacInd>seeTimes || onetime==1
+    if seeBeacInd>seeTimes
         xi = mean(dataStore.particles(:,1,end-1));
         yi = mean(dataStore.particles(:,2,end-1));
         thetai = mean(dataStore.particles(:,3,end-1));
-        onetime = 0;
         seeBeacInd = 0;
     else
         xi = deadreck(end,1);
@@ -363,9 +361,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
                     newpartset = dataStore.particles(:,:,end);
                     dataStore.particles(:,:,end) = repmat(newpartset((Ind-1)*eachnumpart+1:Ind*eachnumpart,:),wpsize,1);
                     noiseprofile = [sqrt(0.001) sqrt(0.001) sqrt(0.01)];
-                    initsw = 2;
                 elseif toc - timer1 > 5
-                    onetime = 1;
                     spinsw = spinsw+1;  % spinsw: 1 -> 2
                     initsw = 2;
                     DRweight = 0.0001;

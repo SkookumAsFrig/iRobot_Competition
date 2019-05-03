@@ -1,4 +1,4 @@
-function [M_final, M_debug] = particleFilter_init(M_init,ubar,zt,ctrl_handle,w_handle,offmap_handle,reinit_handle,eachpartsize)
+function [M_final, M_debug, initw] = particleFilter_init(M_init,ubar,zt,ctrl_handle,w_handle,offmap_handle,reinit_handle,eachpartsize)
 % hGPS: predict the depth measurements for a robot operating
 % in a known map, given the expected range measurements.
 %
@@ -25,7 +25,10 @@ M_final = zeros(M,N);
 M_resize = eachpartsize;
 M_debug = [];
 
-for z=1:M/M_resize
+numbWaypoints = M/M_resize;
+initw = zeros(numbWaypoints,1);
+
+for z=1:numbWaypoints
     Mt = zeros(M_resize,N);
     wt = zeros(M_resize,1);
     
@@ -35,6 +38,8 @@ for z=1:M/M_resize
         wt(i) = feval(w_handle,xtpred,zt);
         Mt(i,1:N-1) = xtpred;
     end
+    
+    initw(z) = sum(wt);
     
     %normalize weights
     if sum(wt)==0
