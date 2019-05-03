@@ -55,6 +55,11 @@ dataStore = struct('truthPose', [],...
                    'beacon',[]);
                
 noRobotCount = 0;
+
+map = 'compMap_mod.mat';
+mapstruct = importdata(map);
+mapdata = mapstruct.optWalls;
+
 tic
 while toc<maxTime
     
@@ -62,7 +67,7 @@ while toc<maxTime
     [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DepthPort,TagPort,tagNum,noRobotCount,dataStore);
     
     % Update Occupancy Grids Here with logOddsBump.m or logOddsDepth.m 
-    
+    crossnumb = howmanycross(dataStore.truthPose(end,2:4), [0.13 0], dataStore.rsdepth(end,3:end), mapdata(2,:))
     % Plot Occupancy Grid and robot trajectory in real time 
     
     pause(0.1);
