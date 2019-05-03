@@ -45,6 +45,7 @@ global dataStore;
 global wpts_go
 global waypoints
 global robotestimate
+global currwp
 
 % initialize datalog struct (customize according to needs)
 dataStore = struct('truthPose', [],...
@@ -90,7 +91,7 @@ ECwptsNum = size(ECwaypoints,1);
 %% All Waypoints Set
 wpts_combo = [waypoints, ones(wptsNum,1);
               ECwaypoints, 2*ones(ECwptsNum,1);
-              wallTwinPts, 3*ones(twinPtsNum,1)];
+              wallTwinPts, [3:twinPtsNum+2]'];
 wpts_go = wpts_combo;
 % goalp = [2.33 0.82;
 %          2.16 -1.03;
@@ -135,7 +136,7 @@ numpart = eachnumpart*wptsNum;
 % RRT
 sampling_handle = @(limits) uniformresample(limits);
 radius = 0.25;
-stepsize = 0.2;
+stepsize = 0.3;
 rrtplan = 0;
 %% Visit waypoints
 epsilon = 0.2; %0.6
@@ -145,6 +146,7 @@ reached = 0;
 alph = 20;
 last = 0;   % stop robot when last waypoint is reached
 finishAll = 0;
+interrupt = 0;  % on the way to waypoint if bumped, not need to remove waypoints
 
 DRweight = 0;
 
@@ -179,7 +181,7 @@ dataStore.deadreck = [minX+xrange/2 minY+yrange/2 0];
 noiseprofile = [sqrt(0.1) sqrt(0.1) sqrt(0.5)];
 tic
 %% RUNNING LOOP
-while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REACHED
+while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REACHED
     %% ########################################################## %%
     %% ###############SENSOR DATA PROCESS BEGIN################## %%
     %% ########################################################## %%
@@ -328,7 +330,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
     % if overhead localization loses the robot for too long, stop it
     if noRobotCount >= 3
         SetFwdVelAngVelCreate(CreatePort, 0,0);
-        %% STATE 1: SPIN BEFORE MOVE
+    %% STATE 1: SPIN BEFORE MOVE
     elseif spinsw <= 1
         %% STATE 1.1: START SPINNING (spinsw = 0)
         if spinsw == 0
@@ -395,14 +397,14 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
             % BE CAREFUL NOT START FROM WAYPOINTS!!!!!!! NEED EXTRA
             % CONDITION
             % eliminate the start point from the whole set
-            if size(wpts_go > 1)
+            if size(wpts_go,1) > 1 && interrupt == 0
                 wpts_go = removePoint(robotestimate,wpts_go);
             end
             
             % RRT Planner
             if ~isempty(wpts_go)%nextwaypoint <= size(wpts_go)
                 % currwp = wpts_go(nextwaypoint,1:2);    
-                currwp = findNeareastPoints(robotestimate(1,1:3),wpts_go,1);
+                [currwp,type] = findNeareastPoints(robotestimate(1,1:3),wpts_go,1);
                 nowp = robotestimate(1,1:2);%deadreck(end,1:2);
                 [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,currwp,stepsize,radius);
                 
@@ -431,6 +433,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
                 turnStart = 0;  % no turn
                 backSum = 0;
                 turnSum = 0;
+                interrupt = 1;
             else
                 if reached==1 && gotopt~=m
                     %if reached current waypoint, increment index and reset reached
@@ -442,6 +445,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
                     end
                 elseif gotopt==m && reached==1
                     %if last one reached, flag last
+                    interrupt = 0;
                     last = 1;
                 end
                 %run visitWaypoints
@@ -454,6 +458,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
                     cmdW=0;
                     last = 0;
                     spinsw = 0; % spin again
+                    spinSum = dataStore.odometry(1,3); % init sum again
                     startTimer = 0; % reset timer
                     rrtplan= 0; % rrt plan again
                     nextwaypoint = nextwaypoint+1;  % next waypoint
