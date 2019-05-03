@@ -14,12 +14,15 @@ function [realWall] = checkOptionalWalls(bumpData)
 BumpRight = bumpData(2);
 BumpLeft = bumpData(3);
 BumpFront = bumpData(7);
+
 bumped= BumpRight || BumpLeft || BumpFront;   
 
 if bumped == 0
     realWall = 0;
 else
     realWall = 1;
+    disp(bumped)
+    disp("BUMP!!!")
 end
 
 end

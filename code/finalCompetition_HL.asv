@@ -42,9 +42,6 @@ end
 % declare dataStore as a global variable so it can be accessed from the
 % workspace even if the program is stopped
 global dataStore;
-global wpts_go
-global waypoints
-global robotestimate
 
 % initialize datalog struct (customize according to needs)
 dataStore = struct('truthPose', [],...
@@ -56,7 +53,6 @@ dataStore = struct('truthPose', [],...
     'deadReck', [], ...
     'ekfMu', [], ...
     'ekfSigma', [],...
-    'deadreck', [],...
     'particles', []);
 
 %% Load Map File Information
@@ -87,9 +83,9 @@ ECwaypoints = mapstruct.ECwaypoints;
 ECwptsNum = size(ECwaypoints,1);
 %% All Waypoints Set
 wpts_combo = [waypoints, ones(wptsNum,1);
-              ECwaypoints, 2*ones(ECwptsNum,1)];
-%               wallMidpoints, 3*ones(wallMptsNum,1)];
-wpts_go = wpts_combo;
+              ECwaypoints, 2*ones(ECwptsNum,1);
+              wallMidpoints, 3*ones(wallMptsNum,1)];
+
 % goalp = [2.33 0.82;
 %          2.16 -1.03;
 %         -2.43 -0.5];
@@ -128,11 +124,6 @@ dvec = 0;
 phivec = 0;
 %% PF
 partTraj = [];
-<<<<<<< HEAD
-eachnumpart = 70;
-numpart = eachnumpart*waypointsNum;
-% RRT
-=======
 DRweight = 0;
 eachnumpart = 70;
 numpart = eachnumpart*wptsNum;
@@ -140,7 +131,6 @@ noiseprofile = [sqrt(0.1) sqrt(0.1) sqrt(0.5)];
 %For initialization wait second stage time
 inititer = 0;
 %% RRT
->>>>>>> 4a723bf3cc01bfe790956da7bb8bd9f7e2457585
 sampling_handle = @(limits) uniformresample(limits);
 radius = 0.25;
 stepsize = 0.2;
@@ -153,21 +143,12 @@ reached = 0;
 alph = 20;
 last = 0;   % stop robot when last waypoint is reached
 finishAll = 0;
-<<<<<<< HEAD
-
-%??????
-DRweight = 0;
-
-%For initialization wait second stage time
-inititer = 0;
-=======
 %% Back & Turn
 cmdV_back = -0.1;
 cmdW_turn = 0.15;
 backStart = 0;
 turnStart = 0;
 stillBump = [];
->>>>>>> 4a723bf3cc01bfe790956da7bb8bd9f7e2457585
 
 % PLOT MAP & BEACONS
 figure(1)
@@ -186,12 +167,10 @@ drawnow
 % READ & STORE SENSOR DATA
 [noRobotCount,dataStore]=readStoreSensorData(CreatePort,DistPort,TagPort,tagNum,noRobotCount,dataStore);
 % deadreck = dataStore.truthPose(1,2:4);
-<<<<<<< HEAD
-dataStore.deadreck = [minX+xrange/2 minY+yrange/2 0];
-noiseprofile = [sqrt(0.1) sqrt(0.1) sqrt(0.5)];
-=======
 deadreck = [minX+xrange/2 minY+yrange/2 0];
->>>>>>> 4a723bf3cc01bfe790956da7bb8bd9f7e2457585
+
+global wpts_go
+global wayp
 
 tic
 %% RUNNING LOOP
@@ -226,23 +205,22 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
     else
         seeBeacInd = 0;
     end
-    
     if seeBeacInd> seeTimes
         xi = mean(dataStore.particles(:,1,end-1));
         yi = mean(dataStore.particles(:,2,end-1));
         thetai = mean(dataStore.particles(:,3,end-1));
         seeBeacInd = 0;
     else
-        xi = dataStore.deadreck(end,1);
-        yi = dataStore.deadreck(end,2);
-        thetai = dataStore.deadreck(end,3);
+        xi = deadreck(end,1);
+        yi = deadreck(end,2);
+        thetai = deadreck(end,3);
     end
     
     % GET ODOMETRY DATA 
     dvec = dataStore.odometry(end,2);
     phivec = dataStore.odometry(end,3);
     newstate = integrateOdom_onestep(xi, yi, thetai, dvec, phivec);
-    dataStore.deadreck = [dataStore.deadreck; newstate'];
+    deadreck = [deadreck; newstate'];
     % ###############SENSOR DATA PROCESS END################## %
     
     
@@ -274,16 +252,12 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
         %[a, b] = drawparticle(mean(dataStore.particles(:,1,end)),mean(dataStore.particles(:,2,end)),mean(dataStore.particles(:,3,end)));
         
         
-<<<<<<< HEAD
-        %% STATE 1: PF Waypoints INIT
-=======
     %% STATE 1: PF Waypoints INIT
->>>>>>> 4a723bf3cc01bfe790956da7bb8bd9f7e2457585
     elseif initsw == 1
         ctrl = [dvec phivec];
-        zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) dataStore.deadreck(end,:)]';
+        zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) deadreck(end,:)]';
         
-        %% PF
+        % PF
         M_init = dataStore.particles(:,:,end);
         ctrl_handle = @(mubar,ubar) integrateOdom_dynamic(mubar(1),...
             mubar(2),mubar(3),ubar(1),ubar(2),noiseprofile);
@@ -293,10 +267,10 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
         reinit_handle = @() resample(mapdata,numpart);
         [M_final,Mt]= particleFilter_init(M_init,ctrl,zt,ctrl_handle,w_handle,o_handle,reinit_handle,eachnumpart);
         dataStore.particles = cat(3,dataStore.particles,M_final);
-        %% STATE 2: RUNNING PF
+    %% STATE 2: RUNNING PF
     else
         ctrl = [dvec phivec];
-        zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) dataStore.deadreck(end,:)]';
+        zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) deadreck(end,:)]';
         
         % PF
         M_init = dataStore.particles(:,:,end);
@@ -315,10 +289,12 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
     ypartmean = mean(dataStore.particles(:,2,end));
     tpartmean = mean(dataStore.particles(:,3,end));
     robotestimate = [xpartmean,ypartmean,tpartmean];
+    % eliminate the start point from the whole set
+    wpts_go = removePoint(robotestimate,wpts_combo);
     
     % PLOT---truthPose & deadreck & particle traj---
     plot(dataStore.truthPose(1:end,2),dataStore.truthPose(1:end,3),'b')
-    plot(dataStore.deadreck(1:end,1),dataStore.deadreck(1:end,2),'g')
+    plot(deadreck(1:end,1),deadreck(1:end,2),'g')
     if ~(spinsw <= 1)
         partTraj = [partTraj; [xpartmean ypartmean tpartmean]];
         plot(partTraj(:,1),partTraj(:,2),'r')
@@ -337,18 +313,14 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
     %% ROBOT CONTROL(CONTROL STATE MACHINE)
     % Set rotate velocity
     fwdVel = 0;
-<<<<<<< HEAD
-    angVel = -0.2;
-=======
     angVel = -0.1;
->>>>>>> 4a723bf3cc01bfe790956da7bb8bd9f7e2457585
     [cmdV,cmdW] = limitCmds(fwdVel,angVel,0.49,0.13);
     
     %% STATE 0: STOP ROBOT
     % if overhead localization loses the robot for too long, stop it
     if noRobotCount >= 3
         SetFwdVelAngVelCreate(CreatePort, 0,0);
-        %% STATE 1: SPIN BEFORE MOVE
+    %% STATE 1: SPIN BEFORE MOVE
     elseif spinsw <= 1
         %% STATE 1.1: START SPINNING (spinsw = 0)
         if spinsw == 0
@@ -357,11 +329,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
             noiseprofile = [0 0 sqrt(pi/2)];
             if nextwaypoint == 1 % first waypoint: spin 360 degree and stop when beacon seen
                 DRweight = 0;
-<<<<<<< HEAD
-                if abs(turnSum) >= 0.1*pi % 360 degree spinning
-=======
                 if abs(spinSum) >= 0.1*pi % 360 degree spinning
->>>>>>> 4a723bf3cc01bfe790956da7bb8bd9f7e2457585
                     spinDone = 1;
                     spinSum = 0;
                 end
@@ -372,22 +340,14 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
             else % following waypoint: spin until beacon seen
                 spinsw = spinsw+1;
             end
-<<<<<<< HEAD
-            %% STATE 1.2: KEEP SPINNING (spinsw = 1)
-        else
-            %% STATE 1.2.1: STOP WHEN A BEACON IN VIEW
-            if dataStore.timebeacon(end,1) ~= -1
-=======
         %% STATE 1.2: KEEP SPINNING (spinsw = 1)
         else
             %% STATE 1.2.1: STOP WHEN A BEACON IN VIEW
             if dataStore.timebeacon(end,1) ~= -1 %%&& abs(dataStore.timebeacon(end,3)) <= 0.3
->>>>>>> 4a723bf3cc01bfe790956da7bb8bd9f7e2457585
                 noiseprofile = [sqrt(0.005) sqrt(0.005) sqrt(pi/2)];
                 inititer = inititer+1;
                 disp("stopped and I see beacon!")
                 if startTimer == 0  % start counting staring sec
-                    DRweight = 0;
                     SetFwdVelAngVelCreate(CreatePort, 0, 0 );
                     timer1 = toc;
                     startTimer = 1;
@@ -397,13 +357,8 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
                         spinsw = spinsw + 1;  % spinsw: 1 -> 2
                         noiseprofile = [sqrt(0.005) sqrt(0.005) sqrt(0.05)];
                         DRweight = 0.0001;
-<<<<<<< HEAD
-                        initsw = 2; % launch PF running
-                        seeTimes = 10;
-=======
                         seeTimes = 10;
                         initsw = 2; % launch PF running
->>>>>>> 4a723bf3cc01bfe790956da7bb8bd9f7e2457585
                     elseif toc - timer1 > 5 || inititer > 1
                         disp("first stage passed")
                         DRweight = 0;
@@ -412,11 +367,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
                 end
             end
         end
-<<<<<<< HEAD
-        % STATE 2: MOVE
-=======
     %% STATE 2: MOVE
->>>>>>> 4a723bf3cc01bfe790956da7bb8bd9f7e2457585
     else
         %% STATE 2.1: QUAD-RRT PLANNING
         if rrtplan==0
@@ -429,25 +380,10 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
             end
             axis equal
             
-            % BE CAREFUL NOT START FROM WAYPOINTS!!!!!!! NEED EXTRA
-            % CONDITION
-            % eliminate the start point from the whole set
-            wpts_go = removePoint(robotestimate,wpts_go);
-
-            
             % RRT Planner
-<<<<<<< HEAD
-            if nextwaypoint <= waypointsNum
-                nowp = [xpartmean,ypartmean];
-                currwp = waypoints(nextwaypoint,:);
-                disp("current waypoint is:")
-                disp(currwp)
-=======
             if nextwaypoint <= size(wpts_go)%waypointsNum
-                % currwp = wpts_go(nextwaypoint,1:2);    
-                currwp = findNeareastPoints(robotestimate(1,1:3),wpts_go,1);
+                currwp = wpts_go(nextwaypoint,1:2);
                 nowp = robotestimate(1,1:2);%deadreck(end,1:2);
->>>>>>> 4a723bf3cc01bfe790956da7bb8bd9f7e2457585
                 [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,currwp,stepsize,radius);
                 
                 % PLOT-----------------------------------
@@ -461,52 +397,12 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
             else
                 finishAll = 1;
             end
-<<<<<<< HEAD
-            % STATE 2.2: VISIT A WAYPOINT
-        else
-=======
         %% STATE 2.2: START VISIT WAYPOINTS
         elseif rrtplan == 1
->>>>>>> 4a723bf3cc01bfe790956da7bb8bd9f7e2457585
             % Get current pose
             x = xpartmean;
             y = ypartmean;
             theta = tpartmean;
-<<<<<<< HEAD
-            if reached==1 && gotopt~=m
-                closeEnough = 0.3;
-                %if reached current waypoint, increment index and reset reached
-                gotopt = gotopt+1;
-                reached = 0;
-                %dynamic closeEnough
-                if gotopt == m-6
-                    closeEnough = 0.05;
-                end
-            elseif gotopt==m && reached==1
-                %if last one reached, flag last
-                last = 1;
-            end
-            %run visitWaypoints
-            [vout,wout,reached] = visitWaypoints(wpts,gotopt,closeEnough,epsilon, alph, x, y, theta);
-            [cmdV,cmdW] = checkCmd(vout,wout,0.1,0.13);
-            
-            % PRINT-----------------------------------
-            %             disp(['cmdV is ' num2str(cmdV)])
-            %             disp(['cmdW is ' num2str(cmdW)])
-            % PRINT-----------------------------------
-            
-            if last==1
-                %stop robot if last one reached
-                cmdV=0;
-                cmdW=0;
-                last = 0;
-                spinsw = 0; % spin again
-                rrtplan= 0; % rrt plan again
-                nextwaypoint = nextwaypoint+1;  % next waypoint
-                gotopt = 1;                     % go to point again
-            end
-            SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW);
-=======
             % bump sensor activated
             if realWall == 1
                 % prepare to backup & replan
@@ -520,7 +416,7 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
                     closeEnough = 0.3;
                     gotopt = gotopt+1;
                     reached = 0;
-                    if gotopt > m-6
+                    if gotopt == m-6
                         closeEnough = 0.05;
                     end
                 elseif gotopt==m && reached==1
@@ -571,7 +467,6 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
                     end
                 end
             end
->>>>>>> 4a723bf3cc01bfe790956da7bb8bd9f7e2457585
         end
     end
     % #####################CONTROL END#######################
@@ -581,12 +476,9 @@ while toc < maxTime && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NO
     drawnow
     [x, z, c, v] = drawparticlestar(dataStore.truthPose(end,2),dataStore.truthPose(end,3),dataStore.truthPose(end,4));
     [h, i] = drawparticlestar_red(xpartmean,ypartmean,tpartmean);
-    [qw, wq] = drawparticlestar_green(dataStore.deadreck(end,1),dataStore.deadreck(end,2),dataStore.deadreck(end,3));
     
     pause(0.1);
     
-    delete(qw);
-    delete(wq);
     delete(h);
     delete(i);
     delete(c);
