@@ -349,6 +349,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                     spinDone = 0;
                 end
             else % following waypoint: spin until beacon seen
+                DRweight = 0;
                 spinsw = spinsw+1;
             end
         %% STATE 1.2: KEEP SPINNING (spinsw = 1)
@@ -370,7 +371,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                         noiseprofile = [sqrt(0.002) sqrt(0.002) sqrt(0.01)];
                         DRweight = 0.000005;
                         initsw = 2; % launch PF running
-                        seeTimes = 10;
+                        seeTimes = 2;
                     elseif toc - timer1 > 5 || inititer > 1
                         disp("first stage passed")
                         DRweight = 0;
@@ -385,7 +386,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
     else
         %% STATE 2.1: QUAD-RRT PLANNING
         if rrtplan==0
-            
+            disp("planning")
             % PLOT-----------------------------------
             figure(2)
             hold on
@@ -406,7 +407,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 % currwp = wpts_go(nextwaypoint,1:2);    
                 [currwp,type] = findNeareastPoints(robotestimate(1,1:3),wpts_go,1);
                 nowp = robotestimate(1,1:2);%deadreck(end,1:2);
-                [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,currwp,stepsize,radius);
+                [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,currwp(1,1:2),stepsize,radius);
                 
                 % PLOT-----------------------------------
                 d=plot(pathpoints(:,1),pathpoints(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1]);
@@ -434,6 +435,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 backSum = 0;
                 turnSum = 0;
                 interrupt = 1;
+                inititer = 0;
             else
                 if reached==1 && gotopt~=m
                     %if reached current waypoint, increment index and reset reached
@@ -457,6 +459,8 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                     cmdV=0;
                     cmdW=0;
                     last = 0;
+                    initsw = 1; % PF init again
+                    inititer = 0;
                     spinsw = 0; % spin again
                     spinSum = dataStore.odometry(1,3); % init sum again
                     startTimer = 0; % reset timer
@@ -472,6 +476,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 SetFwdVelAngVelCreate(CreatePort, cmdV_back, 0);
                 backSum = backSum + dataStore.odometry(end,2);
                 if abs(backSum) > 0.2
+                    disp("backup done");
                     SetFwdVelAngVelCreate(CreatePort, 0, 0);
                     turnStart = 1;
                     backStart = 0;
@@ -482,20 +487,22 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 turnSum = turnSum + dataStore.odometry(end,3);
                 stillBump = [stillBump,realWall];
                 backStart = 0;
-                if turnSum > pi/4
+                if abs(turnSum) > pi/4
+                    disp("turn done")
                     SetFwdVelAngVelCreate(CreatePort, 0, 0);
                     if sum(stillBump) > 0 % check bump sensor again
                          backStart = 1;
                          turnStart = 0;
                          disp("bump again!");
-                    else 
-                        backStart = 1;
+                    else
                         turnStart = 0;
                         initsw = 1;
                         spinsw = 0;
+                        spinSum = dataStore.odometry(1,3); % init sum again
                         startTimer = 0;
                         rrtplan = 0;
                         inititer = 0;
+                        gotopt = 1;
                         disp("replanning");
                     end
                 end
