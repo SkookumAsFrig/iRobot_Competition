@@ -1,4 +1,4 @@
-function[dataStore] = finalCompetition_HL_V2(CreatePort,DistPort,TagPort,tagNum,maxTime)
+function[dataStore] = finalCompetition_HL_V1.9(CreatePort,DistPort,TagPort,tagNum,maxTime)
 %
 %   dataStore = backupBump(CreatePort,DistPort,TagPort,tagNum,maxTime) runs
 %

@@ -438,7 +438,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
     = buildQuadRRT(map,limits,sampling_handle,nowp,currwp(1,1:2),currwp(2,1:2),currwp(3,1:2),stepsize,radius,3);
                
                 % save current goal point for calibration
-                currgoalp = pathpoints(end,:);
+                currGoal = pathpoin
                 
 %                 [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,currwp(1,1:2),stepsize,radius);
 %                 disp("heading to:",num2str(currwp(1,1:2)));
@@ -612,12 +612,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
         end
     %% STATE 4: CALIBRATION (spinsw == 4)
     else
-        gap = findEuclideanDistance(robotestimate(1,1:2),currgoalp);
-        if (gap > closeEnough)
-            spinsw = 2; % replan
-        else
-            spinsw = 3;
-        end
+        gap = findEuclideanDistance(startpt,endpt);
     end
     % #####################CONTROL END#######################
     
