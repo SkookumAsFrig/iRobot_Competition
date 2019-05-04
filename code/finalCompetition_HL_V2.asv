@@ -446,7 +446,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 
 
                  currwp = wpts(end,1:2);
-                 currtype = findPtType(currwp, wpts_go);
+                 currtype = wpts_go(end,)
 %                [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2,timeup] ...
 %     = buildQuadRRT(map,limits,sampling_handle,nowp,currwp(1,1:2),currwp(2,1:2),currwp(3,1:2),stepsize,radius,3);
                
@@ -658,7 +658,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             disp("close enough");
             arrived = 1;    
         end
-        if currtype <= 2
+        if type <= 2
             spinsw = 2;
         else
             spinsw = 5;

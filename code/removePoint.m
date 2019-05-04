@@ -5,8 +5,7 @@ function waypoints = removePoint(pose,waypoints)
 %           waypoints   n x 3           a set of coordinates of waypoints
 %
 %   OUTPUT:
-%           waypoints   (n-1) x 2       n-1 points
-%           type        k x 1           signals indicates the type of the point
+%           waypoints   (n-1) x 3       n-1 points
 %
 
     kNearest = 1;
