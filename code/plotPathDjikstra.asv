@@ -52,13 +52,14 @@ for i=1:g-1
     end
 end
 
-[cost,path,vertices] = findPath(obstacles,limits,waypoints,start,mapdata,0.26);
+[cost,path,vertices] = findPath(obstacles,limits,initialp,goalp);
 
 plot(vertices(path,1),vertices(path,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1])
 
-plot(start(1),start(2),'ko','MarkerFaceColor',[1 0 0])
+plot(initialp(1),initialp(2),'ko','MarkerFaceColor',[1 0 0])
+plot(goalp(1),goalp(2),'ko','MarkerFaceColor',[0 1 0])
 
-title('Shortest Path Plot')
+title('Shortest Path Plot, Environment = hw8.txt')
 xlabel('Global X')
 ylabel('Global Y')
 

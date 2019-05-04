@@ -1,13 +1,13 @@
-function [vert, connect_mat] = createRoadmap(polygons,limits,start_goal)
+function [vert, connect_mat] = createRoadmap(polygons,limits,waypoints,start, mapextend, edges)
 % createRoadmap: Given a polygonal environment returns a roadmap covering
 % Q_free. Can also input initial and goal points to include in roadmap.
 %
-%   [vert, connect_mat, G] = createRoadmap(workspacetxt,limits,start_goal) 
+%   [vert, connect_mat, G] = createRoadmap(polygonstxt,limits,start_goal)
 %   returns the Nodes, Connectivity Matrix and MATLAB Graph Object
 %   representing the roadmap.
 %
 %   INPUTS
-%      workspacetxt     Each line in the file contains the vertices of
+%      polygonstxt     Each line in the file contains the vertices of
 %                       one polygonal obstacle: v1x, v1y, v2x, v2y,
 %                       etc. The vertices are given in counterclockwise
 %                       order. To make it easy to import in MATLAB,
@@ -34,33 +34,24 @@ function [vert, connect_mat] = createRoadmap(polygons,limits,start_goal)
 [m,~] = size(polygons);
 
 vert = [];
-edges = cell(m,1);
-convhullres = cell(m,1);
 
 for i=1:m
-    minind = 10;
-    x = polygons(i,1:2:minind)';
-    y = polygons(i,2:2:minind)';
-    [lv,~] = size(vert);
-    convind = [1:length(x)-1 1];
-    convind = convind + lv;
-    convhullres{i} = [x y convind'];
-    vert = [vert;[x(1:end-1) y(1:end-1) i*ones(length(x)-1,1)]];
-    tempedge = [];
+    x = polygons(i,1:2:end)';
+    y = polygons(i,2:2:end)';
     for j=1:4
-        tempedge = [tempedge;polygons(i,2*j-1:2*j+2)];
+        currx = x(j);
+        curry = y(j);
+        if currx>limits(1) && curry>limits(2) && currx<limits(3) && curry<limits(4)
+            vert = [vert;[currx curry]];
+        end
     end
-    edges{i}=tempedge;
 end
 
-% bounds = [limits(1) limits(2);limits(1) limits(4);limits(3) limits(2);limits(3) limits(4)];
-% 
-% vert = [vert;[bounds zeros(4,1)]];
-if nargin==3
-    vert = [vert;[start_goal -ones(2,1)]];
-end
+vert = [vert; waypoints; start];
 
 [g,~] = size(vert);
+[n,~] = size(mapextend);
+[p,~] = size(edges);
 connect_mat = zeros(g,g);
 
 for j=1:g-1
@@ -68,25 +59,24 @@ for j=1:g-1
     for z=j+1:g
         endvert = vert(z,1:2);
         desw = 0;
-        
-        for k=1:m
-            edgevec = edges{k};
-            [n,~]=size(edgevec);
-            if ismember([currvert endvert],edgevec)
+        for l=1:n
+            [isect,~,~,~]= intersectPoint(currvert(1),currvert(2),...
+                endvert(1),endvert(2),mapextend(l,1),mapextend(l,2),...
+                mapextend(l,3),mapextend(l,4));
+            if isect
                 desw = 1;
                 break
             end
-            for l=1:n
+        end
+        if desw==0
+            for l=1:p
                 [isect,~,~,ua]= intersectPoint(currvert(1),currvert(2),...
-                    endvert(1),endvert(2),edgevec(l,1),edgevec(l,2),...
-                    edgevec(l,3),edgevec(l,4));
+                    endvert(1),endvert(2),edges(l,1),edges(l,2),...
+                    edges(l,3),edges(l,4));
                 if isect && ua>1e-7 && abs(ua-1)>1e-7
                     desw = 1;
                     break
                 end
-            end
-            if desw==1
-                break
             end
         end
         if desw==0
@@ -95,29 +85,7 @@ for j=1:g-1
             connect_mat(z,j)=dist;
         end
     end
-end
-
-for i=1:m
-    nowconv = convhullres{i};
-    [h,~] = size(nowconv);
-    for j=1:h-1
-        thisind = nowconv(j,3);
-        nextind = nowconv(j+1,3);
-        dist = norm(nowconv(j,1:2)-nowconv(j+1,1:2));
-        connect_mat(thisind,nextind)=dist;
-        connect_mat(nextind,thisind)=dist;
-    end
-end
-
-for i=1:g-3
-    %within same polygon
-    thisobs = vert(i,3);
-    nextobs = vert(i+1,3);
-    if thisobs == nextobs
-        dist = norm(vert(i,1:2)-vert(i+1,1:2));
-        connect_mat(i,i+1)=dist;
-        connect_mat(i+1,i)=dist;
-    end
+    
 end
 
 end
