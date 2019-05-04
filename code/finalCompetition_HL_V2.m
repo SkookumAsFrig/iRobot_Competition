@@ -265,13 +265,15 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
         spinDone = 0;                           % flag indicates spin finish
         
         % init PF
-        xprep = repmat(waypoints(:,1),1,eachnumpart);
-        xpart = reshape(xprep',[],1);
-        yprep = repmat(waypoints(:,2),1,eachnumpart);
-        ypart = reshape(yprep',[],1);
-        tprep = linspace(2*pi/eachnumpart,2*pi,eachnumpart);
-        thepart = repmat(tprep,1,wptsNum)';
-        wi = ones(numpart,1)/numpart;
+%         xprep = repmat(waypoints(:,1),1,eachnumpart);
+%         xpart = reshape(xprep',[],1);
+%         yprep = repmat(waypoints(:,2),1,eachnumpart);
+%         ypart = reshape(yprep',[],1);
+%         tprep = linspace(2*pi/eachnumpart,2*pi,eachnumpart);
+%         thepart = repmat(tprep,1,wptsNum)';
+%         wi = ones(numpart,1)/numpart;
+%         dataStore.particles = [xpart ypart thepart wi];
+        [xpart ypart thepart wi] = initParticleSet(waypoints,eachnumpart,wptsNum,numpart);
         dataStore.particles = [xpart ypart thepart wi];
         
         % To STATE 1
