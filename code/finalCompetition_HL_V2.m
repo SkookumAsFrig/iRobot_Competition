@@ -430,7 +430,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             % CONDITION
             % eliminate the start point from the whole set
             stop = 1;
-            if size(wpts_go,1) > 1 && interrupt == 0 && arrived == 1
+            if interrupt == 0 && arrived == 1 %size(wpts_go,1) > 1
                 wpts_go = removePoint(robotestimate,wpts_go);
             end
             
