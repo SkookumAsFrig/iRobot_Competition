@@ -37,7 +37,7 @@ for i=1:m-4
 end
 
 %start = [-2 1];
-start  = [-0.0448   -0.3296];
+start  = [-0.0448   -0.5296];
 hold on
 
 [vert, connect_mat] = createRoadmap(obstacles,limits,waypoints,start,mapext,edges);

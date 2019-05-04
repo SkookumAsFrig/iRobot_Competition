@@ -34,7 +34,6 @@ function [vert, connect_mat] = createRoadmap(polygons,limits,waypoints,start, ma
 [m,~] = size(polygons);
 
 vert = [];
-ref_vert = [];
 
 for i=1:m
     x = polygons(i,1:2:end)';
@@ -44,7 +43,6 @@ for i=1:m
         curry = y(j);
         if currx>limits(1) && curry>limits(2) && currx<limits(3) && curry<limits(4)
             vert = [vert;[currx curry]];
-            ref_vert = [ref_vert;[currx curry i]];
         end
     end
 end
@@ -52,7 +50,6 @@ end
 vert = [vert; waypoints; start];
 
 [g,~] = size(vert);
-[d,~] = size(ref_vert);
 [n,~] = size(mapextend);
 [p,~] = size(edges);
 connect_mat = zeros(g,g);
@@ -78,8 +75,8 @@ for j=1:g-1
                     endvert(1),endvert(2),edges(l,1),edges(l,2),...
                     edges(l,3),edges(l,4));
                 if isect && ua>1e-7 && abs(ua-1)>1e-7
-                    if z==g && j<=d
-                        pind = ref_vert(j,3);
+                    if z==g
+                        pind = ceil(l/4);
                         x = polygons(pind,1:2:8)';
                         y = polygons(pind,2:2:8)';
                         NODE = [x y];
