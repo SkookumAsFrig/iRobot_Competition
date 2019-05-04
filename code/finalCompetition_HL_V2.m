@@ -414,7 +414,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
         
         %% STATE 2: MOVE
     elseif spinsw == 2
-        %% STATE 2.1: QUAD-RRT PLANNING
+        %% STATE 2.1: PRM PLANNING
         if rrtplan==0
             disp("planning")
             % PLOT-----------------------------------
@@ -432,6 +432,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 wpts_go = removePoint(robotestimate,wpts_go);
             end
             
+            
             % RRT Planner
             if ~isempty(wpts_go)%nextwaypoint <= size(wpts_go)
                 % currwp = wpts_go(nextwaypoint,1:2);
@@ -444,8 +445,6 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
 %                [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2,timeup] ...
 %     = buildQuadRRT(map,limits,sampling_handle,nowp,currwp(1,1:2),currwp(2,1:2),currwp(3,1:2),stepsize,radius,3);
                
-                % save current goal point for calibration
-                currgoalp = wpts(end,:);
                 
 %                 [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,currwp(1,1:2),stepsize,radius);
 %                 disp("heading to:",num2str(currwp(1,1:2)));
@@ -590,7 +589,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                     startTimer = 1;
                 else % staring time up
                     if toc - timer1 > stareTime_L
-                        disp("54 seconds passed+")
+                        disp("4 seconds passed+")
                         spinsw = 4;  % spinsw: 3 -> 2
                         noiseprofile = [sqrt(0.002) sqrt(0.002) sqrt(0.01)];
                         DRweight = 0.000005;
@@ -627,8 +626,8 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             end
         end
     %% STATE 4: CALIBRATION (spinsw == 4)
-    else
-        gap = findEuclideanDistance(robotestimate(1,1:2),currgoalp);
+    elseif spinsw == 4
+        gap = findEuclideanDistance(robotestimate(1,1:2),currwp);
         if (gap > closeEnough) % replan path for current goal
             disp("calibrate");
             arrived = 0;
@@ -636,6 +635,9 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             disp("close enough");
             arrived = 1;    
         end
+        spinsw = 5;
+    %% STATE 5: DETECT WALL
+    else
         spinsw = 2;
     end
     % #####################CONTROL END#######################
