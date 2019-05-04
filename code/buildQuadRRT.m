@@ -49,6 +49,7 @@ if n==4
     workspace = [workspace zeros(m,1)];
 end
 
+cases = 1;
 
 V = startloc;
 V2 = goalloc1;
