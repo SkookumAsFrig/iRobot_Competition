@@ -1,9 +1,9 @@
-function[dataStore] = finalCompetition_biRRT_labparameters(CreatePort,DistPort,TagPort,tagNum,maxTime)
+function[dataStore] = finalCompetition_biRRT_labparameters_v0(CreatePort,DistPort,TagPort,tagNum,maxTime)
 % backupBump: Drives robot forward at constant velocity until it bumps
 % into somthing. If a bump sensor is triggered, command the robot to back
 % up 0.25m and turn clockwise 30 degs, before continuing to drive forward
 % again. Saves a datalog.
-%RUN THIS [dataStore] = finalCompetition_biRRT_labparameters(Ports.create,Ports.dist,Ports.tag,05)
+%RUN THIS [dataStore] = finalCompetition_biRRT_LAB(Ports.create,Ports.dist,Ports.tag,05)
 %SetFwdVelAngVelCreate(CreatePort, 0,0 );
 %Ports = CreatePiInit('C3PO')
 %   dataStore = backupBump(CreatePort,DistPort,TagPort,tagNum,maxTime) runs
@@ -84,9 +84,9 @@ Angleout = 0;
 
 initsw = 0; % state switch flag
 
-spinsw = 0; % inner state switch flag {0---Star spin;
-%1---Finish spin twice;
-%2---Stare at beacon done}
+spinsw = 0; % inner state switch flag {0---Star spin; 
+                                      %1---Finish spin twice; 
+                                      %2---Stare at beacon done}
 startTimer = 0; % 3-second timer launch flag
 
 seeBeacInd = 0;
@@ -107,7 +107,7 @@ mapstruct = importdata(map);
 mapdata = mapstruct.map;
 beaconmat = mapstruct.beaconLoc;
 [beaconsize,~] = size(beaconmat);
-waypoints = [mapstruct.waypoints;mapstruct.ECwaypoints];
+waypoints = mapstruct.waypoints;
 [wpsize,~] = size(waypoints);
 [mapsize,~] = size(mapdata);
 maxX = max([max(mapdata(:,1)) max(mapdata(:,3))]);
@@ -124,10 +124,8 @@ beconID = beaconmat(:,1);
 eachnumpart = 40;
 numpart = eachnumpart*wpsize;
 
-% goalp = [0.48,-0.19];
-goalp = [-2.33,1.08];
 % goalp = [2.33 0.82];
-% goalp = [-2.43 -0.5];
+goalp = [-2.43 -0.5];
 % goalp = [2.16 -1.03];
 % map = 'compMap_mod.mat';
 
@@ -141,12 +139,12 @@ limits = [minX minY maxX maxY];
 %sampling_handle = @(limits,lastind) lowdisp_resample(limits,lastind);
 sampling_handle = @(limits) uniformresample(limits);
 radius = 0.25;
-stepsize = 0.25;
+stepsize = 0.15;
 oneshot = 0;
 
 %constants to initialize
 epsilon = 0.6;
-closeEnough = 0.4;
+closeEnough = 0.3;
 gotopt = 1;
 reached = 0;
 alph = 20;
@@ -154,9 +152,6 @@ alph = 20;
 last = 0;
 DRweight = 0;
 inititer = 0;
-
-accum_initw = zeros(wpsize,1);
-onetime = 0;
 
 tic
 
@@ -182,10 +177,9 @@ deadreck = [minX+xrange/2 minY+yrange/2 0];
 noiseprofile = [0 0 sqrt(0.5)];
 
 seeTimes = 2;
-exit = 0;
 
 %% RUNNING LOOP
-while toc < maxTime && exit~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REACHED
+while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REACHED
     
     % CHECK DATA SIZE BEFORE READ SENSOR DATA
     [q,~] = size(dataStore.beacon);
@@ -251,7 +245,7 @@ while toc < maxTime && exit~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         
         % to STATE 1
         initsw = 1;
-        %% STATE 1: PF Waypoints INIT
+    %% STATE 1: PF Waypoints INIT
     elseif initsw == 1
         ctrl = [dvec phivec];
         zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) deadreck(end,:)]';
@@ -264,13 +258,10 @@ while toc < maxTime && exit~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
             angles,meas,beaconmat,DRweight);
         o_handle = @(PSet) offmap_detect(PSet,mapdata);
         reinit_handle = @() resample(mapdata,numpart);
-        [M_final,Mt,initw]= particleFilter_init(M_init,ctrl,zt,ctrl_handle,w_handle,o_handle,reinit_handle,eachnumpart);
-        %disp(initw)
-        accum_initw = accum_initw+initw;
-        disp(accum_initw)
+        [M_final,Mt]= particleFilter_init(M_init,ctrl,zt,ctrl_handle,w_handle,o_handle,reinit_handle,eachnumpart);
         dataStore.particles = cat(3,dataStore.particles,M_final);
         %dataStore.debugparticles = cat(3,dataStore.debugparticles,Mt);
-        %% STATE 2: Running PF
+    %% STATE 2: Running PF
     else
         ctrl = [dvec phivec];
         zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) deadreck(end,:)]';
@@ -327,23 +318,8 @@ while toc < maxTime && exit~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
             if(spinTwo == 1)
                 spinsw = spinsw+1;  % spinsw: 0 -> 1
             end
-            % KEEP SPINNING
-        elseif spinsw == -1
-            noiseprofile = [0.001 0.001 sqrt(pi/2)];
-            DRweight = 0;
-            SetFwdVelAngVelCreate(CreatePort, cmdV2, cmdW2 );
-            turnSum = turnSum + dataStore.odometry(end,3);
-            % 360 degree spinning
-            if abs(turnSum) >= 0.1*pi
-                spinTwo = 1;
-            end
-            if(spinTwo == 1)
-                spinsw = spinsw+2;  % spinsw: 0 -> 1
-                oneshot=0;
-            end
-            % KEEP SPINNING
+        % KEEP SPINNING
         else
-            turnSum = turnSum + dataStore.odometry(end,3);
             % when a beacon in view then stop
             if dataStore.timebeacon(end,1) ~= -1 %&& abs(dataStore.timebeacon(end,3)) <= 0.2
                 noiseprofile = [sqrt(0.005) sqrt(0.005) sqrt(pi/2)];
@@ -358,37 +334,15 @@ while toc < maxTime && exit~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
                     if toc - timer1 > 10
                         disp("10 seconds passed")
                         spinsw = spinsw+1;  % spinsw: 1 -> 2
-                        noiseprofile = [sqrt(0.01) sqrt(0.01) sqrt(0.1)];
+                        noiseprofile = [sqrt(0.002) sqrt(0.002) sqrt(0.01)];
                         initsw = 2;
-                        DRweight = 0.000001;
+                        DRweight = 0.000005;
                         seeTimes = 2;
-                        if norm([xpartmean ypartmean]-goalp) < 0.1
-                            exit = 1;
-                        end
                     elseif toc - timer1 > 5 || inititer > 1
                         disp("first stage passed")
                         DRweight = 0;
                         initsw = 2;
                     end
-                end
-            elseif abs(turnSum) >= 2*pi
-                if startTimer == 0
-                    DRweight = 0;
-                    SetFwdVelAngVelCreate(CreatePort, 0, 0 );
-                    timer1 = toc;
-                    startTimer = 1;
-                    
-                    [~,Ind] = max(accum_initw);
-                    newpartset = dataStore.particles(:,:,end);
-                    dataStore.particles(:,:,end) = repmat(newpartset((Ind-1)*eachnumpart+1:Ind*eachnumpart,:),wpsize,1);
-                    noiseprofile = [sqrt(0.01) sqrt(0.01) sqrt(0.1)];
-                    initsw = 2;
-                elseif toc - timer1 > 5
-                    onetime = 1;
-                    spinsw = spinsw+1;  % spinsw: 1 -> 2
-                    initsw = 2;
-                    DRweight = 0.0001;
-                    seeTimes = 2;
                 end
             end
             
@@ -427,21 +381,20 @@ while toc < maxTime && exit~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
             %if reached current waypoint, increment index and reset reached
             gotopt = gotopt+1;
             reached = 0;
-            if gotopt > m-4
-                closeEnough = 0.1;
+            if gotopt > m-5
+                closeEnough = 0.15;
             end
         elseif gotopt==m && reached==1
             %if last one reached, flag last
             last = 1;
-            spinsw = -1;
         end
         %run visitWaypoints
         [vout,wout,reached] = visitWaypoints(wpts,gotopt,closeEnough,epsilon, alph, x, y, theta);
-        [cmdV,cmdW] = limitCmds(vout,wout,0.065,0.13);
+        [cmdV,cmdW] = limitCmds(vout,wout,0.07,0.13);
         
         % PRINT-----------------------------------
-        %         disp(['cmdV is ' num2str(cmdV)])
-        %         disp(['cmdW is ' num2str(cmdW)])
+%         disp(['cmdV is ' num2str(cmdV)])
+%         disp(['cmdW is ' num2str(cmdW)])
         % PRINT-----------------------------------
         
         if last==1
@@ -453,7 +406,7 @@ while toc < maxTime && exit~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         % check NaN
         if isnan(cmdV)
             cmdV = 0;
-        end
+        end       
         if isnan(cmdW)
             cmdW = 0;
         end
