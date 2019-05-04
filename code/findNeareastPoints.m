@@ -20,7 +20,7 @@ if kNearest > waypointsNum
     type = 0;
     disp("ERROR_1: k value is larger than waypoints number");
 elseif kNearest == waypointsNum
-    pointSet = waypoints;
+    pointSet = waypoints(:,1:2);
     type = waypoints(:,3);
 else
     d = findEuclideanDistance(robot_xy,firstPt);

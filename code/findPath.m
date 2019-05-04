@@ -66,6 +66,8 @@ for i=1:n
     if realcost<cost
         path = realpath;
         cost = realcost;
+    else
+        disp(realcost);
     end
 end
 
