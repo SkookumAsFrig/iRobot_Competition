@@ -1,4 +1,4 @@
-function [cost,path,vert] = findPath(polygons,limits,waypoints,start,mapdata,extendamount)
+function [cost,finalpath] = findPath(polygons,limits,waypoints,start,mapdata,extendamount)
 % findPath: given a polygonal environment, a roadmap, and initial and goal
 % points, returns the shortest path connecting the initial and goal points.
 
@@ -49,6 +49,16 @@ end
 
 [vert, connect_mat] = createRoadmap(polygons,limits,waypoints,start,mapext,edges);
 [m,~] = size(vert);
+
+for i=1:m-1
+    for j=i+1:m
+        if connect_mat(i,j)~=0
+            plot([vert(i,1) vert(j,1)],[vert(i,2) vert(j,2)],...
+                '--','LineWidth',1,'Color',[0.8500    0.3300    0.1000])
+        end
+    end
+end
+
 [n,~] = size(waypoints);
 cost = inf;
 for i=1:n
@@ -58,5 +68,8 @@ for i=1:n
         cost = realcost;
     end
 end
+
+finalpath = [vert(path,1) vert(path,2)];
+
 
 end

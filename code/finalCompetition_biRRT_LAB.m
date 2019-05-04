@@ -101,8 +101,8 @@ phivec = 0;
 partTraj = [];
 
 %% Load Map & Beacon Information
-map = 'compMap_nobeacon.mat';
-% map = 'compMap_big.mat';
+% map = 'compMap_nobeacon.mat';
+map = 'compMap_big.mat';
 mapstruct = importdata(map);
 mapdata = mapstruct.map;
 beaconmat = mapstruct.beaconLoc;
@@ -125,11 +125,11 @@ eachnumpart = 60;
 numpart = eachnumpart*wpsize;
 
 % goalp = [2.33 0.82];
-goalp = [-2.43 -0.5];
+% goalp = [-2.43 -0.5];
 % goalp = [2.16 -1.03];
 % map = 'compMap_mod.mat';
 
-%goalp = [3 3];
+goalp = [3 3];
 %goalp = [1.5 3.5];
 % goalp = [-3 3.5];
 % goalp = waypoints(1,:);
@@ -144,7 +144,7 @@ oneshot = 0;
 
 %constants to initialize
 epsilon = 0.2;
-closeEnough = 0.3;
+closeEnough = 0.1;
 gotopt = 1;
 reached = 0;
 alph = 20;
@@ -167,10 +167,10 @@ for e=1:beaconsize
     plot(beaconmat(e,2),beaconmat(e,3),'rp','MarkerFaceColor','r')
     text(beaconmat(e,2),beaconmat(e,3),num2str(beaconmat(e,1)))
 end
-xlim([-3, 3]);
-ylim([-2.5, 2.5]);
-% xlim([-5, 5]);
-% ylim([-5, 5]);
+% xlim([-3, 3]);
+% ylim([-2.5, 2.5]);
+xlim([-5, 5]);
+ylim([-5, 5]);
 
 hold on
 % READ & STORE SENSOR DATA
@@ -330,7 +330,7 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
             % when a beacon in view then stop
             turnSum = turnSum + dataStore.odometry(end,3);
             if dataStore.timebeacon(end,1) ~= -1 && abs(dataStore.timebeacon(end,3)) <= 0.15
-                noiseprofile = [sqrt(0.005) sqrt(0.005) sqrt(pi/2)];
+                noiseprofile = [sqrt(0.002) sqrt(0.002) sqrt(pi/2)];
                 inititer = inititer+1;
                 disp("stopped and I see beacon!")
                 if startTimer == 0
@@ -379,19 +379,26 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
         if oneshot==0
             figure(2)
             hold on
-            for j=1:mapsize
-                a=plot([mapdata(j,1) mapdata(j,3)],[mapdata(j,2) mapdata(j,4)],'LineWidth',2,'Color','k','HandleVisibility','off');
-            end
-            axis equal
-            nowp = [xpartmean ypartmean];
-            [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,goalp,stepsize,radius);
-            
-            d=plot(pathpoints(:,1),pathpoints(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1]);
-            e=plot(nowp(1),nowp(2),'ko','MarkerFaceColor',[1 0 0]);
-            f=plot(goalp(1),goalp(2),'ko','MarkerFaceColor',[0 1 0]);
-            
+            %             for j=1:mapsize
+            %                 a=plot([mapdata(j,1) mapdata(j,3)],[mapdata(j,2) mapdata(j,4)],'LineWidth',2,'Color','k','HandleVisibility','off');
+            %             end
+            %             axis equal
+            %             nowp = [xpartmean ypartmean];
+            %             [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,goalp,stepsize,radius);
+            %
+            %             d=plot(pathpoints(:,1),pathpoints(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1]);
+            %             e=plot(nowp(1),nowp(2),'ko','MarkerFaceColor',[1 0 0]);
+            %             f=plot(goalp(1),goalp(2),'ko','MarkerFaceColor',[0 1 0]);
+            %
+            %             oneshot=1;
+            %             wpts = pathpoints;
             oneshot=1;
-            wpts = pathpoints;
+            nowp = [xpartmean ypartmean];
+            obstacles = wall2polygon(mapdata,0.27);
+            obstacles = obstacles(5:end,:);
+            [cost,wpts] = findPath(obstacles,limits,goalp,nowp,mapdata,0.26);
+            plot(wpts(:,1),wpts(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1])
+            axis equal
             [m,~] = size(wpts);
         end
         
@@ -408,9 +415,9 @@ while toc < maxTime && last~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REA
             %if reached current waypoint, increment index and reset reached
             gotopt = gotopt+1;
             reached = 0;
-            if gotopt == m-5
-                closeEnough = 0.05;
-            end
+%             if gotopt == m-5
+%                 closeEnough = 0.05;
+%             end
         elseif gotopt==m && reached==1
             %if last one reached, flag last
             last = 1;
@@ -465,10 +472,11 @@ figure(2)
 % set forward and angular velocity to zero (stop robot) before exiting the function
 SetFwdVelAngVelCreate(CreatePort, 0,0 );
 g = plot(dataStore.truthPose(:,2),dataStore.truthPose(:,3),'b');
-legend([a expath expoint expath2 expoint2 d e f g],'Map','Start Search Tree Edges',...
-    'Start Search Tree Nodes','Goal Search Tree Edges','Goal Search Tree Nodes',...
-    'Final Solution Path','Starting Point','Goal Point','Actual Trajectory','Location','northeastoutside')
-title('birrtPlanner Search Tree, Solution Path and Robot Trajectory')
+% legend([a expath expoint expath2 expoint2 d e f g],'Map','Start Search Tree Edges',...
+%     'Start Search Tree Nodes','Goal Search Tree Edges','Goal Search Tree Nodes',...
+%     'Final Solution Path','Starting Point','Goal Point','Actual Trajectory','Location','northeastoutside')
+% title('birrtPlanner Search Tree, Solution Path and Robot Trajectory')
+title('Roadmap Solution Path and Robot Trajectory')
 xlabel('Global X')
 ylabel('Global Y')
 % PLOT-----------------------------------

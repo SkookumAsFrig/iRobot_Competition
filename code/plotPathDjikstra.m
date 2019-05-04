@@ -52,9 +52,9 @@ for i=1:g-1
     end
 end
 
-[cost,path,vertices] = findPath(obstacles,limits,waypoints,start,mapdata,0.26);
+[cost,path] = findPath(obstacles,limits,waypoints,start,mapdata,0.26);
 
-plot(vertices(path,1),vertices(path,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1])
+plot(path(:,1),path(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1])
 
 plot(start(1),start(2),'ko','MarkerFaceColor',[1 0 0])
 
