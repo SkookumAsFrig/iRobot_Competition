@@ -436,10 +436,10 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             % RRT Planner
             if ~isempty(wpts_go)%nextwaypoint <= size(wpts_go)
                 % currwp = wpts_go(nextwaypoint,1:2);
-                [currwp,type] = findNeareastPoints(robotestimate(1,1:3),wpts_go,1);
+                %[currwp,type] = findNeareastPoints(robotestimate(1,1:3),wpts_go,1);
                 nowp = robotestimate(1,1:2);
                 obstacles = wall2polygon(mapdata,0.27);
-                [cost,wpts] = findPath(obstacles,limits,currwp,nowp,mapdata,0.26);
+                [cost,wpts] = findPath(obstacles,limits,wpts_go(:,1:2),nowp,mapdata,0.26);
                 
 
 %                [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2,timeup] ...
@@ -457,11 +457,11 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 
                 %                 [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,currwp(1,1:2),stepsize,radius);
                 disp("heading to:");
-                disp(currwp)
+                disp(currgoalp)
                 % PLOT-----------------------------------
                 %d=plot(pathpoints(:,1),pathpoints(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1]);
                 e=plot(nowp(1),nowp(2),'ko','MarkerFaceColor',[1 0 0]);
-                f=plot(currwp(1),currwp(2),'ko','MarkerFaceColor',[0 1 0]);
+                f=plot(currgoalp(1),currgoalp(2),'ko','MarkerFaceColor',[0 1 0]);
                 
                 rrtplan=1;
                 %wpts = pathpoints;
