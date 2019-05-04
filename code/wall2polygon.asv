@@ -29,7 +29,9 @@ for i = 1: size_map
     plot([map(i,1),map(i,3)],[map(i,2),map(i,4)],'k')
     hold on
     for j = 1:4
-        plot(obstacles(i,1:2:end),obstacles(i,2:2:end),'b');
+        %plot(obstacles(i,1:2:end),obstacles(i,2:2:end),'b');
+        plot([obstacles(i,1),obstacles(i,end-1)],[obstacles(i,2),obstacles(i,end)],'r');
+        hold on
     end
 end
 
