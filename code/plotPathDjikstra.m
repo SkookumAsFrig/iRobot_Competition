@@ -2,11 +2,13 @@ clc
 clear all
 close all
 
-map = 'compMap.mat';
+load('wptsdebug.mat')
+map = 'compMap_mod.mat';
 mapstruct = importdata(map);
 % mapdata = [mapstruct.map;mapstruct.optWalls];
 mapdata = mapstruct.map;
-waypoints = mapstruct.waypoints;
+% waypoints = mapstruct.waypoints;
+waypoints = wpts_go(:,1:2);
 
 maxX = max([max(mapdata(:,1)) max(mapdata(:,3))]);
 maxY = max([max(mapdata(:,2)) max(mapdata(:,4))]);
@@ -34,8 +36,8 @@ for i=1:m-4
     mapext(i,:) = extendedge(mapdata(i+4,:), 0.26);
 end
 
-start = [-2 1];
-
+%start = [-2 1];
+start  = [-0.0448   -0.3296];
 hold on
 
 [vert, connect_mat] = createRoadmap(obstacles,limits,waypoints,start,mapext,edges);
