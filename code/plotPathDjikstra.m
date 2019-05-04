@@ -2,23 +2,43 @@ clc
 clear all
 close all
 
-map = 'compMap_nobeacon.mat';
+map = 'compMap.mat';
 mapstruct = importdata(map);
+% mapdata = [mapstruct.map;mapstruct.optWalls];
 mapdata = mapstruct.map;
-limits = [0 0 100 100];
+waypoints = mapstruct.waypoints;
+
+maxX = max([max(mapdata(:,1)) max(mapdata(:,3))]);
+maxY = max([max(mapdata(:,2)) max(mapdata(:,4))]);
+minX = min([min(mapdata(:,1)) min(mapdata(:,3))]);
+minY = min([min(mapdata(:,2)) min(mapdata(:,4))]);
+limits = [minX minY maxX maxY];
 
 figure
 
-obstacles = wall2polygon(mapdata,0.25);
+obstacles = wall2polygon(mapdata,0.27);
+obstacles = obstacles(5:end,:);
+g = size(obstacles,1);
+edges = zeros(g*4,4);
+for i=1:g
+    for j=1:4
+        edges(4*(i-1)+j,:) = obstacles(i,2*(j-1)+1:2*(j-1)+4);
+    end
+end
 
-initialp = [80 95];
-goalp = [10 50];
-start_goal = [initialp;goalp];
-[vert, connect_mat] = createRoadmap(obstacles,limits,start_goal);
+axis equal
 
-plot([limits(1) limits(1) limits(3) limits(3) limits(1)],...
-    [limits(2) limits(4) limits(4) limits(2) limits(2)],'k--','LineWidth',2)
+[m,n] = size(mapdata);
+mapext = zeros(m-4,n);
+for i=1:m-4
+    mapext(i,:) = extendedge(mapdata(i+4,:), 0.26);
+end
+
+start = [-2 1];
+
 hold on
+
+[vert, connect_mat] = createRoadmap(obstacles,limits,waypoints,start,mapext,edges);
 
 axis equal
 
@@ -32,14 +52,13 @@ for i=1:g-1
     end
 end
 
-[cost,path,vertices] = findPath(obstacles,limits,initialp,goalp);
+[cost,path] = findPath(obstacles,limits,waypoints,start,mapdata,0.26);
 
-plot(vertices(path,1),vertices(path,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1])
+plot(path(:,1),path(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1])
 
-plot(initialp(1),initialp(2),'ko','MarkerFaceColor',[1 0 0])
-plot(goalp(1),goalp(2),'ko','MarkerFaceColor',[0 1 0])
+plot(start(1),start(2),'ko','MarkerFaceColor',[1 0 0])
 
-title('Shortest Path Plot, Environment = hw8.txt')
+title('Shortest Path Plot')
 xlabel('Global X')
 ylabel('Global Y')
 
