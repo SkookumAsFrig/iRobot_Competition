@@ -67,6 +67,7 @@ mapstruct = importdata(map);
 optionalW = mapstruct.optWalls;
 knownwall = mapstruct.map;
 knownsize = size(knownwall,1);
+originalwpsz = knownsize;
 mapdata = [mapstruct.map; optionalW];
 allwalls = [mapstruct.map; optionalW];
 [mapsize,~] = size(mapdata);
@@ -440,7 +441,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             % eliminate the start point from the whole set
             stop = 1;
             if interrupt == 0 && arrived == 1 %size(wpts_go,1) > 1
-                wpts_go = removePoint(robotestimate,wpts_go);
+                wpts_go = removePoint(robotestimate,wpts_go,originalwpsz);
             end
             
             if nomore == 0
@@ -714,52 +715,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
         disp(['number of cross is' num2str(wallcross)])
         disp(['number of block is' num2str(wallblock)])
     end
-    
-    
-    
-    %% WALL DETECT
-    global currwall
-    global curroptwall
-    currwall = size(mapdata,1)-knownsize;
-    curroptwall = mapdata(end-currwall+1:end,:);
-    if currwall ~= 0
-        wallID = [];
-        for cw = 1:currwall
-            if cw == 1
-                d = point2seg(robotestimate,curroptwall(cw,:),sensorOrigin);
-            end
-            temp = point2seg(robotestimate,curroptwall(cw,:),sensorOrigin);
-            if temp < d
-                wallID = cw;
-                d = temp;
-            end
-            if isempty(wallID)
-                wallID = 1;
-            end
-        end
-        %    disp(['Closest Wall: ' num2str(wallID)]);
-        disp(['Closest Wall: ' num2str(wallID)]);
-        [crossnumb,blocknumb] = howmanycross(robotestimate, sensorOrigin, dataStore.rsdepth(end,3:end), curroptwall(wallID,:));
-        wallcross(wallID,:) = wallcross(wallID,:)+crossnumb;
-%         wallblock(wallID,:) = wallblock(wallID,:)+blocknumb;
-        disp(['number of cross is ' num2str(wallcross')])
-%         disp(['number of block is' num2str(wallblock')])
-        if wallcross(wallID)>20 && del == 0
-            plot(curroptwall(wallID,1:2:end),curroptwall(wallID,2:2:end),'w','LineWidth',2);
-            mapdata = [knownwall; curroptwall];     % reload all wals
-            mapdata(knownsize+wallID,:) = [];
-            wallcross(wallID,:) = [];  % delete a wall, reduce vector size
-            wallcross = zeros(size(wallcross,1),1);
-            del = 1;
-            disp("Delete Wall");
-        end
-    else
-        disp("No Optional Wall Left!");
-    end   
-    
-    
-    
-    
+
     % PLOT-----------------------------------
     figure(1)
     drawnow
