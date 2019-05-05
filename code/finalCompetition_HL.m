@@ -700,7 +700,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             end
         end
         %    disp(['Closest Wall: ' num2str(wallID)]);
-        disp(['Closest Wall: ' wallID]);
+        disp(['Closest Wall: ' num2str(wallID)]);
         [crossnumb,blocknumb] = howmanycross(robotestimate, sensorOrigin, dataStore.rsdepth(end,3:end), curroptwall(wallID,:));
         wallcross(wallID,:) = wallcross(wallID,:)+crossnumb;
 %         wallblock(wallID,:) = wallblock(wallID,:)+blocknumb;
