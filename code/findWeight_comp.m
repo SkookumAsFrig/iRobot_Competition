@@ -44,9 +44,9 @@ for i=1:ldp
 end
 
 if DRweight ~= 0
-    wtDR(1) = normpdf(robotPose(1),deadreck(1),sqrt(0.0001));
-    wtDR(2) = normpdf(robotPose(2),deadreck(2),sqrt(0.0001));
-    wtDR(3) = normpdf(robotPose(3),deadreck(3),sqrt(0.0001));
+    wtDR(1) = normpdf(robotPose(1),deadreck(1),sqrt(0.001));
+    wtDR(2) = normpdf(robotPose(2),deadreck(2),sqrt(0.001));
+    wtDR(3) = normpdf(robotPose(3),deadreck(3),sqrt(0.001));
     wtDR = DRweight*wtDR;
 end
 
