@@ -90,9 +90,11 @@ twinPtsNum = size(wallTwinPts,1);
 ECwaypoints = mapstruct.ECwaypoints;
 ECwptsNum = size(ECwaypoints,1);
 %% All Waypoints Set
+% wpts_combo = [waypoints, ones(wptsNum,1);
+%     ECwaypoints, 2*ones(ECwptsNum,1);
+%     wallTwinPts, [3:twinPtsNum+2]'];
 wpts_combo = [waypoints, ones(wptsNum,1);
-    ECwaypoints, 2*ones(ECwptsNum,1);
-    wallTwinPts, [3:twinPtsNum+2]'];
+    ECwaypoints, 2*ones(ECwptsNum,1)];
 wpts_go = wpts_combo;
 % goalp = [2.33 0.82;
 %          2.16 -1.03;
