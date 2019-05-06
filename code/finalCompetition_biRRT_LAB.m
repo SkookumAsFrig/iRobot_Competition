@@ -101,8 +101,8 @@ phivec = 0;
 partTraj = [];
 
 %% Load Map & Beacon Information
-% map = 'compMap_nobeacon.mat';
-map = 'compMap_big.mat';
+map = 'compMap.mat';
+% map = 'compMap_big.mat';
 mapstruct = importdata(map);
 mapdata = mapstruct.map;
 beaconmat = mapstruct.beaconLoc;
@@ -125,11 +125,11 @@ eachnumpart = 60;
 numpart = eachnumpart*wpsize;
 
 % goalp = [2.33 0.82];
-% goalp = [-2.43 -0.5];
+goalp = [-2.43 -0.5];
 % goalp = [2.16 -1.03];
 % map = 'compMap_mod.mat';
 
-goalp = [3 3];
+% goalp = [3 3];
 %goalp = [1.5 3.5];
 % goalp = [-3 3.5];
 % goalp = waypoints(1,:);
@@ -167,10 +167,10 @@ for e=1:beaconsize
     plot(beaconmat(e,2),beaconmat(e,3),'rp','MarkerFaceColor','r')
     text(beaconmat(e,2),beaconmat(e,3),num2str(beaconmat(e,1)))
 end
-% xlim([-3, 3]);
-% ylim([-2.5, 2.5]);
-xlim([-5, 5]);
-ylim([-5, 5]);
+xlim([-3, 3]);
+ylim([-2.5, 2.5]);
+% xlim([-5, 5]);
+% ylim([-5, 5]);
 
 hold on
 % READ & STORE SENSOR DATA
