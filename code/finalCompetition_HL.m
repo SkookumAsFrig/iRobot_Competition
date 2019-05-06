@@ -502,7 +502,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 turnSum = 0;
                 interrupt = 1;
                 inititer = 0;
-                stillBump= [];
+               % stillBump= [];
             else
                 if reached==1 && gotopt~=m
                     %if reached current waypoint, increment index and reset reached
@@ -564,18 +564,19 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 SetFwdVelAngVelCreate(CreatePort, 0, cmdW_turn);
                 stop = 0;
                 turnSum = turnSum + dataStore.odometry(end,3);
-                stillBump = [stillBump,realWall];
+                %stillBump = [stillBump,realWall];
                 backStart = 0;
-                if abs(turnSum) > pi
+                if abs(turnSum) > pi/4
                     %                     disp("turn done")
                     SetFwdVelAngVelCreate(CreatePort, 0, 0);
                     stop = 1;
-                    if sum(stillBump) > 0 % check bump sensor again
+                    %if sum(stillBump) > 0 % check bump sensor again
+                    if realwall == 1
                         backStart = 1;
                         turnStart = 0;
                         backSum = 0;
                         turnSum = 0;
-                        stillBump = [];
+%                         stillBump = [];
                         %                         disp("bump again!");
                     else
                         turnStart = 0;
@@ -586,11 +587,12 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                         plan = 0;
                         inititer = 0;
                         gotopt = 1;
-                        stillBump = [];
+%                         stillBump = [];
                         %                         disp("replanning");
                     end
                 else
-                    if sum(stillBump) > 0
+                    if realwall == 1
+%                     if sum(stillBump) > 0
                         backStart = 1;
                         turnStart = 0;
                         backSum = 0;
