@@ -731,7 +731,6 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
     [x, z, c, v] = drawparticlestar(dataStore.truthPose(end,2),dataStore.truthPose(end,3),dataStore.truthPose(end,4));
     [h, i] = drawparticlestar_red(xpartmean,ypartmean,tpartmean);
     [qw, wq] = drawparticlestar_green(dataStore.deadreck(end,1),dataStore.deadreck(end,2),dataStore.deadreck(end,3));
-    
     pause(0.1);
     
     delete(qw);
@@ -750,6 +749,10 @@ figure(2)
 % set forward and angular velocity to zero (stop robot) before exiting the function
 SetFwdVelAngVelCreate(CreatePort, 0,0 );
 g = plot(dataStore.truthPose(:,2),dataStore.truthPose(:,3),'b');
+hold on
+for j=1:mapsize
+    plot([mapdata(j,1) mapdata(j,3)],[mapdata(j,2) mapdata(j,4)],'LineWidth',2,'Color','k','HandleVisibility','off')
+end
 % legend([a expath expoint expath2 expoint2 d e f g],'Map','Start Search Tree Edges',...
 %     'Start Search Tree Nodes','Goal Search Tree Edges','Goal Search Tree Nodes',...
 %     'Final Solution Path','Starting Point','Goal Point','Actual Trajectory','Location','northeastoutside')
