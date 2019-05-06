@@ -460,7 +460,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 
                 [cost,wpts] = findPath(obstacles,limits,wpts_go(:,1:2),nowp,mapdata,0.26);
                 if isinf(wpts(1)) || isinf(wpts(2))
-                    nomore = 0
+                    nomore = 0;
                 else
                     plan=1;
                 end
@@ -480,6 +480,11 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             else
                 finishAll = 1;
             end
+            
+            if nomore == 0 && ~ismember(0,wcsw)
+                finishAll = 1;
+            end
+            
             % STATE 2.2: VISIT WAYPOINTS
         elseif plan == 1
             % Get current pose
@@ -603,7 +608,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW);
             stop = 0;
             spinSum = spinSum + dataStore.odometry(end,3);
-            noiseprofile = [sqrt(0.0005) sqrt(0.0005) sqrt(pi/8)];
+            noiseprofile = [sqrt(0.0005) sqrt(0.0005) sqrt(0.1)];
             DRweight = 0;
             if abs(spinSum) >= 0.1*pi % 360 degree spinning
                 spinDone = 1;
