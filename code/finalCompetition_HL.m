@@ -571,7 +571,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                     SetFwdVelAngVelCreate(CreatePort, 0, 0);
                     stop = 1;
                     %if sum(stillBump) > 0 % check bump sensor again
-                    if realwall == 1
+                    if realWall == 1
                         backStart = 1;
                         turnStart = 0;
                         backSum = 0;
@@ -584,20 +584,20 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                         spinsw = 2;
                         spinSum = dataStore.odometry(1,3); % init sum again
                         startTimer = 0;
-                        plan = 0;
+                        plan = 0;   % replan
                         inititer = 0;
                         gotopt = 1;
 %                         stillBump = [];
                         %                         disp("replanning");
                     end
                 else
-                    if realwall == 1
+                    if realWall == 1
 %                     if sum(stillBump) > 0
                         backStart = 1;
                         turnStart = 0;
                         backSum = 0;
                         turnSum = 0;
-                        stillBump = [];
+%                         stillBump = [];
                         %                         disp("turn bump!");
                     end
                 end
