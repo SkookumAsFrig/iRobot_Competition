@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 % Example Lab Map - 2014
 % file containing map information
 % formatting:
@@ -74,3 +75,81 @@ beacon -2.750 -0.980 [0.0 0.0 0.0] 2
 
 
 
+=======
+% Example Lab Map - 2014
+% file containing map information
+% formatting:
+% wall x1 y1 x2 y2
+%   order does not matter between the points
+% line x1 y1 x2 y2
+% beacon x y [r g b] id_tag
+%   [r g b] is the red-green-blue color vector
+% virtwall x y theta
+%   virtual walls emit from a location, not like real walls
+%   theta is the angle relative to the positive x-axis
+%
+% walls
+%
+wall 2.750 1.500 2.750 -1.500
+wall 2.750 -1.500 -2.750 -1.500
+wall -2.750 -1.500 -2.750 1.500
+wall -2.750 1.500 2.750 1.500
+wall -2.750 0.00 -1.15 0.00
+wall -1.250 0.000 -1.250 -0.930
+wall 0.00 0.00 0.00 1.500
+wall -0.60 -0.700 0.6 -0.700
+wall 1.2500 0.430 2.75 0.430
+wall 1.50 -1.50 1.50 -0.600
+
+%
+% optional walls
+%
+wall 0.00 0.00 0.000 -0.700
+line 0.00 -0.700 0.00 -1.500
+line -1.150  0.000 0.00 0.000
+%
+% waypoints
+%
+line -2.53 -0.50 -2.33 -0.50
+line -2.53 -0.30 -2.33 -0.30
+line -2.33 -0.50 -2.33 -0.30
+line -2.53 -0.50 -2.53 -0.30
+line 2.26 -0.93 2.06 -0.93
+line 2.26 -1.13 2.06 -1.13
+line 2.26 -0.93 2.26 -1.13
+line 2.06 -0.93 2.06 -1.13
+line 2.43 0.92 2.23 0.920
+line 2.43 0.72 2.23 0.720
+line 2.43 0.92 2.43 0.720
+line 2.23 0.92 2.23 0.720
+
+%
+% ec waypoints
+%
+line -2.430 1.180 -2.230 0.980
+line -2.430 0.980 -2.230 1.180
+line 0.38 -0.09 0.58 -0.29
+line 0.38 -0.29 0.58 -0.09
+line -0.63 -1.26 -0.43 -1.06
+line -0.63 -1.06 -0.43 -1.26
+%
+% beacons
+%
+beacon -1.29 -0.580 [0.0 0.0 0.0] 3
+beacon 0.060 0.51 [0.0 0.0 0.0] 13
+beacon -1.22 -0.58 [0.0 0.0 0.0] 9
+beacon -1.87 1.50 [0.0 0.0 0.0] 7
+beacon 1.40 0.340 [0.0 0.0 0.0] 4
+beacon -0.060 0.510 [0.0 0.0 0.0] 5
+beacon 0.630 -1.500 [0.0 0.0 0.0] 6
+beacon 1.6500 0.450 [0.0 0.0 0.0] 8
+beacon 1.450 -1.10 [0.0 0.0 0.0] 1
+beacon 1.56 -1.10 [0.0 0.0 0.0] 10
+beacon 0.570 1.50 [0.0 0.0 0.0] 11
+beacon -2.750 -0.980 [0.0 0.0 0.0] 2
+
+
+
+
+
+>>>>>>> 1e942d70f43b34862a8d44ca15927aa25db1a310

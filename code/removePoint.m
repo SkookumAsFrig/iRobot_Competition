@@ -1,4 +1,4 @@
-function waypoints = removePoint(pose,waypoints)
+function waypoints = removePoint(pose,waypoints,originalwpsz)
 %   Function waypoints = removePoint(pose,waypoints)
 %   INPUT:
 %           pose        1 x 3 or 3 x 1  robot current pose
@@ -33,10 +33,11 @@ function waypoints = removePoint(pose,waypoints)
     if opt == 0
         waypoints(removeID,:) = [];
     else
-        if mod(waypoints(removeID,3),2)==1 % odd idx
-            waypoints(removeID:removeID+1,:) = [];
-        else % even idx
-            waypoints(removeID-1:removeID,:) = [];
-        end
+        waypoints(originalwpsz+1:end,:) = [];
+%         if mod(waypoints(removeID,3),2)==1 % odd idx
+%             waypoints(removeID:removeID+1,:) = [];
+%         else % even idx
+%             waypoints(removeID-1:removeID,:) = [];
+%         end
     end
 end
