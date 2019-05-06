@@ -42,11 +42,11 @@ end
 % declare dataStore as a global variable so it can be accessed from the
 % workspace even if the program is stopped
 global dataStore;
-global wpts_go
-global waypoints
-global robotestimate
-global currwp
-global mapdata
+% global wpts_go
+% global waypoints
+% global robotestimate
+% global currwp
+% global mapdata
 % initialize datalog struct (customize according to needs)
 dataStore = struct('truthPose', [],...
     'odometry', [], ...
@@ -172,8 +172,9 @@ wallcross = zeros(1,optwallsize);
 wcsw = zeros(1, optwallsize);
 wallblock = zeros(1,optwallsize);
 nomore = 1;
-global addwp;
-global originalwpsz;
+dualenter = 0;
+% global addwp;
+% global originalwpsz;
 
 % PLOT MAP & BEACONS
 figure(1)
@@ -194,6 +195,7 @@ drawnow
 % deadreck = dataStore.truthPose(1,2:4);
 dataStore.deadreck = [minX+xrange/2 minY+yrange/2 0];
 noiseprofile = [sqrt(0.1) sqrt(0.1) sqrt(0.5)];
+
 tic
 %% RUNNING LOOP
 while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT REACHED
@@ -424,6 +426,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
     elseif spinsw == 2
         % STATE 2.1: PRM PLANNING
         if plan==0
+            dualenter = dualenter+1;
             %             disp("planning")
             % PLOT-----------------------------------
             figure(2)
@@ -481,12 +484,13 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 finishAll = 1;
             end
             
-            if nomore == 0 && ~ismember(0,wcsw)
+            if nomore == 0 && dualenter > 2
                 finishAll = 1;
             end
             
             % STATE 2.2: VISIT WAYPOINTS
         elseif plan == 1
+            dualenter = 0;
             % Get current pose
             x = xpartmean;
             y = ypartmean;
