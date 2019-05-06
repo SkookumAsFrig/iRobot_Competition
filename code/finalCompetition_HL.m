@@ -157,6 +157,7 @@ stop = 0;
 
 initoneshot = 0;
 caliboneshot = 0;
+dynamicspeed = 0.1;
 
 %% Back & Turn
 cmdV_back = -0.1;
@@ -371,7 +372,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW);
             stop = 0;
             spinSum = spinSum + dataStore.odometry(end,3);
-            noiseprofile = [0 0 sqrt(pi/1.5)];
+            noiseprofile = [0 0 sqrt(pi)];
             DRweight = 0;
             if abs(spinSum) >= 0.1*pi % 360 degree spinning
                 spinDone = 1;
@@ -388,7 +389,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             spinSum = spinSum + dataStore.odometry(end,3);
             if initoneshot == 1 ...
                     || (dataStore.timebeacon(end,1) ~= -1 && abs(dataStore.timebeacon(end,3)) <= 0.2) % see beacon
-                noiseprofile = [sqrt(0.005) sqrt(0.005) sqrt(pi/3)];
+                noiseprofile = [sqrt(0.005) sqrt(0.005) sqrt(pi/2)];
                 inititer = inititer+1;
                 initoneshot = 1;
                 %                 disp("stopped and I see beacon!")
@@ -480,8 +481,11 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 if isinf(wpts(1)) || isinf(wpts(2))
                     nomore = 0;
                 else
+                    midpoint = (wpts(end-1,1:2) - wpts(end,1:2))*2/3 + wpts(end,1:2);
+                    wpts = [wpts(1:end-1,1:2); midpoint; wpts(end,1:2)];
                     plan=1;
                     SetLEDsRoomba(CreatePort,3,0,100);
+                    dynamicspeed = 0.1;
                 end
                 
                 currwp = wpts(end,1:2);
@@ -534,12 +538,13 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 end
                 
                 if gotopt==m
+                    dynamicspeed = 0.05;
                     closeEnough = 0.1;
                 end
                 
                 %run visitWaypoints
                 [vout,wout,reached] = visitWaypoints(wpts,gotopt,closeEnough,epsilon, alph, x, y, theta);
-                [cmdV,cmdW] = checkCmd(vout,wout,0.1,0.13);
+                [cmdV,cmdW] = checkCmd(vout,wout,dynamicspeed,0.13);
                 stop = 0;
                 if last==1
                     %stop robot if waypoint reached
