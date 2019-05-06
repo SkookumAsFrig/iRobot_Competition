@@ -180,11 +180,17 @@ stillBump = [];
 accum_initw = zeros(wptsNum,1);
 spinAgain = 0;
 
+<<<<<<< HEAD
 %% Wall Detect
 optwallsize = size(mapstruct.optWalls,1);
 wallcross = zeros(1,optwallsize);
 wcsw = zeros(1, optwallsize);
 wallblock = zeros(1,optwallsize)
+=======
+
+%% Wall Detect
+del = 0;
+>>>>>>> cdfcf5c111235417a573f58fed22c90370112e84
 
 % PLOT MAP & BEACONS
 figure(1)
@@ -687,6 +693,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
         spinsw = 2;
     end
     % #####################CONTROL END#######################
+<<<<<<< HEAD
     
     figure(1)
     drawnow
@@ -722,6 +729,70 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
         disp(['number of cross is' num2str(wallcross)])
         disp(['number of block is' num2str(wallblock)])
     end
+=======
+    global currwall
+    global curroptwall
+    currwall = size(mapdata,1)-knownsize; 
+    curroptwall = mapdata(end-currwall+1:end,:);
+    if currwall ~= 0
+        wallID = [];
+        for cw = 1:currwall
+            if cw == 1
+                d = point2seg(robotestimate,curroptwall(cw,:),sensorOrigin);
+            end
+            temp = point2seg(robotestimate,curroptwall(cw,:),sensorOrigin);
+            if temp < d
+                wallID = cw;
+                d = temp;
+            end
+            if isempty(wallID)
+                wallID = 1;
+            end
+        end
+        %    disp(['Closest Wall: ' num2str(wallID)]);
+        disp(['Closest Wall: ' wallID]);
+        [crossnumb,blocknumb] = howmanycross(robotestimate, sensorOrigin, dataStore.rsdepth(end,3:end), curroptwall(wallID,:));
+        wallcross(wallID,:) = wallcross(wallID,:)+crossnumb;
+%         wallblock(wallID,:) = wallblock(wallID,:)+blocknumb;
+        disp(['number of cross is ' num2str(wallcross')])
+%         disp(['number of block is' num2str(wallblock')])
+        if wallcross(wallID)>20 && del == 0
+            plot(curroptwall(wallID,1:2:end),curroptwall(wallID,2:2:end),'w','LineWidth',2);
+            mapdata = [knownwall; curroptwall];     % reload all wals
+            mapdata(knownsize+wallID,:) = [];
+            wallcross(wallID,:) = [];  % delete a wall, reduce vector size
+            wallcross = zeros(size(wallcross,1),1);
+            del = 1;
+            disp("Delete Wall");
+        end
+    else
+        disp("No Optional Wall Left!");
+    end
+    figure(1)
+    drawnow
+%     for op=1:gg
+%         [crossnumb,blocknumb] = howmanycross(robotestimate, sensorOrigin, dataStore.rsdepth(end,3:end), optionalW(op,:));
+%         wallcross(op) = wallcross(op)+crossnumb;
+%         wallblock(op) = wallblock(op)+blocknumb;
+%         if wallcross(op) > 20 && wcsw(op) == 0
+%             wcsw(op) = 1;
+%             plot(optionalW(op,1:2:end),optionalW(op,2:2:end),'w','LineWidth',2)
+%             addwalls = [];
+%             for ip=1:gg
+%                 if wcsw(ip) == 0
+%                     addwalls = [addwalls; optionalW(ip,:)];
+%                 end
+%             end
+%             mapdata = [mapstruct.map; addwalls];
+%         end
+%         if wallblock(op) > wallcross(op)
+%             wpsw(op) = 1;
+%             plot(optionalW(op,1:2:end),optionalW(op,2:2:end),'r','LineWidth',2);
+%         end
+%     end
+%     disp(['number of cross is' num2str(wallcross)])
+%      disp(['number of block is' num2str(wallblock)])
+>>>>>>> cdfcf5c111235417a573f58fed22c90370112e84
     % PLOT-----------------------------------
     
     [x, z, c, v] = drawparticlestar(dataStore.truthPose(end,2),dataStore.truthPose(end,3),dataStore.truthPose(end,4));
