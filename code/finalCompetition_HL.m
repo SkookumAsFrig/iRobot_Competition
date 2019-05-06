@@ -65,11 +65,8 @@ dataStore = struct('truthPose', [],...
 map = 'compMap.mat';
 mapstruct = importdata(map);
 optionalW = mapstruct.optWalls;
-knownwall = mapstruct.map;
-knownsize = size(knownwall,1);
-originalwpsz = knownsize;
+originalwpsz = size(mapstruct.map,1);
 mapdata = [mapstruct.map; optionalW];
-allwalls = [mapstruct.map; optionalW];
 [mapsize,~] = size(mapdata);
 maxX = max([max(mapdata(:,1)) max(mapdata(:,3))]);
 maxY = max([max(mapdata(:,2)) max(mapdata(:,4))]);
@@ -82,15 +79,10 @@ limits = [minX minY maxX maxY];
 % beacon
 beaconmat = mapstruct.beaconLoc;
 [beaconsize,~] = size(beaconmat);
-beconID = beaconmat(:,1);
 
 % waypoints
 waypoints = mapstruct.waypoints;
 wptsNum = size(waypoints,1);
-wallMidpoints = findOptWallMidpoint(mapstruct.optWalls);
-wallMptsNum = size(wallMidpoints,1);
-wallTwinPts = findOptWallTwinPts(mapstruct.optWalls,0.32);
-twinPtsNum = size(wallTwinPts,1);
 ECwaypoints = mapstruct.ECwaypoints;
 ECwptsNum = size(ECwaypoints,1);
 %% All Waypoints Set
@@ -181,6 +173,7 @@ wcsw = zeros(1, optwallsize);
 wallblock = zeros(1,optwallsize);
 nomore = 1;
 global addwp;
+global originalwpsz;
 
 % PLOT MAP & BEACONS
 figure(1)
@@ -423,7 +416,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                     seeTimes = 3;
                 end
             else
-%                 disp("no beacon in view!");
+                %                 disp("no beacon in view!");
             end
         end
         
@@ -434,19 +427,21 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             %             disp("planning")
             % PLOT-----------------------------------
             figure(2)
+            clf
             hold on
             
             % BE CAREFUL NOT START FROM WAYPOINTS!!!!!!! NEED EXTRA
             % CONDITION
             % eliminate the start point from the whole set
             stop = 1;
-            if interrupt == 0 && arrived == 1 %size(wpts_go,1) > 1
+            if interrupt == 0 && arrived == 1 && nomore == 1 %size(wpts_go,1) > 1
                 wpts_go = removePoint(robotestimate,wpts_go,originalwpsz);
             end
             
             if nomore == 0
                 nomore = 1;
                 disp("adding twin points")
+                originalwpsz = size(wpts_go,1);
                 addwp = [];
                 for ip=1:optwallsize
                     if wcsw(ip) == 0
@@ -459,7 +454,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             
             % PRM Planner
             if ~isempty(wpts_go)
-
+                
                 nowp = robotestimate(1,1:2);
                 obstacles = wall2polygon(mapdata,0.27);
                 
@@ -472,10 +467,10 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 
                 currwp = wpts(end,1:2);
                 currtype = findPtType(currwp, wpts_go);
-
+                
                 plot(wpts(:,1),wpts(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1])
                 axis equal
-
+                
                 disp(['Heading to next waypoint:' currwp]);
                 e=plot(nowp(1),nowp(2),'ko','MarkerFaceColor',[1 0 0]);
                 f=plot(currwp(1),currwp(2),'ko','MarkerFaceColor',[0 1 0]);
@@ -508,14 +503,16 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                     closeEnough = 0.15;
                     gotopt = gotopt+1;
                     reached = 0;
-                    if gotopt > m-1
-                        closeEnough = 0.15;
-                    end
                 elseif gotopt==m && reached==1
                     %if last one reached, flag last
                     interrupt = 0;
                     last = 1;
                 end
+                
+                if gotopt==m
+                        closeEnough = 0.1;
+                end
+                    
                 %run visitWaypoints
                 [vout,wout,reached] = visitWaypoints(wpts,gotopt,closeEnough,epsilon, alph, x, y, theta);
                 [cmdV,cmdW] = checkCmd(vout,wout,0.1,0.13);
@@ -528,7 +525,11 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                     last = 0;
                     initsw = 2;
                     inititer = 0;
-                    spinsw = 3; % spin again
+                    if currtype>1
+                        spinsw = 2;
+                    else
+                        spinsw = 3; % spin again
+                    end
                     spinDone = 0;
                     spinAgain = 1;
                     spinSum = dataStore.odometry(end,3); % init sum again
@@ -712,10 +713,10 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 mapdata = [mapstruct.map; addwalls];
             end
         end
-        disp(['number of cross is' num2str(wallcross)])
-        disp(['number of block is' num2str(wallblock)])
+%         disp(['number of cross is' num2str(wallcross)])
+%         disp(['number of block is' num2str(wallblock)])
     end
-
+    
     % PLOT-----------------------------------
     figure(1)
     drawnow
