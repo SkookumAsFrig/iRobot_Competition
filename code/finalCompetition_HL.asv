@@ -161,8 +161,6 @@ inititer = 0;
 arrived = 1;
 
 stop = 0;
-global nomore
-nomore = 0;
  
 %% Back & Turn
 cmdV_back = -0.1;
@@ -177,7 +175,8 @@ spinAgain = 0;
 %% Wall Detect
 optwallsize = size(mapstruct.optWalls,1);
 wallcross = zeros(optwallsize,1);
-sw = zeros(optwallsize,1);
+wcsw = zeros(optwallsize,1);
+wbsw = zeros(optwallsize,1);
 wallblock = zeros(optwallsize,1);
 del = 1;    % signal indicates when to delete wall
 
@@ -457,9 +456,6 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
 %                 [cost,wpts] = findPath(obstacles,limits,currwp,nowp,mapdata,0.26);
                 [cost,wpts] = findPath(obstacles,limits,wpts_go(:,1:2),nowp,mapdata,0.26);
                 
-                if wpts(1) == Inf && wpts(2) == Inf
-                    nomore = 1;
-                end
 
                  currwp = wpts(end,1:2);
                  currtype = findPtType(currwp, wpts_go);
@@ -541,6 +537,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                     startTimer = 0; % reset timer
                     plan= 0; % rrt plan again
                     gotopt = 1;                     % go to point again
+                    del = 0;
                 end
                 SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW);
             end
@@ -669,20 +666,20 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
         end
     %% STATE 4: CALIBRATION (spinsw == 4)
     elseif spinsw == 4
+        gap = findEuclideanDistance(robotestimate(1,1:2),currwp);
+        if (gap > closeEnough) % replan path for current goal
+            disp("calibrate");
+            arrived = 0;
+        else % replan path for the next goal
+            disp("close enough");
+            BeepRoomba(CreatePort);
+            arrived = 1;    
+        end
         if currtype <= 2
-            gap = findEuclideanDistance(robotestimate(1,1:2),currwp);
-            if (gap > closeEnough) % replan path for current goal
-                disp("calibrate");
-                arrived = 0;
-            else % replan path for the next goal
-                disp("close enough");
-                BeepRoomba(CreatePort);
-                arrived = 1;
-            end
             spinsw = 2;
         else
             spinsw = 5;
-        end         
+        end
     %% STATE 5: VOID
     else
        spinsw = 2;
@@ -712,25 +709,23 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             end
         end
         %    disp(['Closest Wall: ' num2str(wallID)]);
-%         disp(['Closest Wall: ' num2str(wallID)]);
+        disp(['Closest Wall: ' num2str(wallID)]);
         [crossnumb,blocknumb] = howmanycross(robotestimate, sensorOrigin, dataStore.rsdepth(end,3:end), curroptwall(wallID,:));
         wallcross(wallID,:) = wallcross(wallID,:)+crossnumb;
         wallblock(wallID,:) = wallblock(wallID,:)+blocknumb;
         disp(['number of cross is ' num2str(wallcross')])
         disp(['number of block is' num2str(wallblock')])
-        if wallcross(wallID)>15 && wallcross(wallID) > wallblock(wallID) && sw(wallID) == 0
+        if wallcross(wallID)>30 && wallcross(wallID) > wallblock(wallID) && wcsw(wallID) == 0
             plot(curroptwall(wallID,1:2:end),curroptwall(wallID,2:2:end),'w','LineWidth',2);
             mapdata = [knownwall; curroptwall];     % reload all wals
             mapdata(knownsize+wallID,:) = [];
             wallcross(wallID,:) = [];  % delete a wall, reduce vector size
             wallblock(wallID,:) = [];
-            sw(wallID,:) = [];
             wallcross = zeros(size(wallcross,1),1);
             wallblock = zeros(size(wallblock,1),1);
-            sw = zeros(size(sw,1),1);
+            del = 1;
             disp("Delete Wall");
-        elseif wallcross(wallID) == 0 && wallblock(wallID) == 0 && sw(wallID) == 0 && nomore == 1
-            nomore = 0;
+        elseif wallcross(wallID) == 0 && wallblock(wallID) == 0 && wbsw(wallID) == 0
             twinPts = findOptWallTwinPts(curroptwall(wallID,:),0.32);
             twin1 = twinPts(1,:);
             twin2 = twinPts(2,:);
@@ -759,8 +754,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 wpts_go = [wpts_go; addPts];
                 disp("Add Twins");
             end
-        elseif wallblock(wallID) > 15 && wallblock(wallID) > wallcross(wallID) && sw(wallID)==0
-            sw(wallID) = 1;
+        elseif wallblock(wallID) > 30 && wallblock(wallID) > wallcross(wallID) && del == 0
             plot(curroptwall(wallID,1:2:end),curroptwall(wallID,2:2:end),'r','LineWidth',2);
             disp("Keep Wall");
         end
