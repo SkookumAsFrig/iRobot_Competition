@@ -530,7 +530,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                     last = 0;
                     initsw = 2;
                     inititer = 0;
-                    if currtype>1
+                    if currtype>2
                         spinsw = 2;
                     else
                         spinsw = 3; % spin again
