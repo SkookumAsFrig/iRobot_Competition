@@ -9,7 +9,7 @@ for j=1:9
         robotPose(1),robotPose(2),wall(1),wall(2),wall(3),wall(4));
     otherend = ua*norm(tempglob-robotPose(1:2));
     if isect 
-        if otherend>0.3
+        if otherend>0.25
             crossnumb = crossnumb+1;
         else
             blocknumb = blocknumb + 1;
