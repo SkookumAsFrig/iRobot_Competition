@@ -25,11 +25,11 @@ function [a, b] = drawparticle(x,y,theta)
 %   Homework 4
 %   SHI, KOWIN
 
-a = scatter(x,y,'o');
+a = plot(x,y,'ko','MarkerSize',10);
 hold on
 ptrlength = 0.5;
 endptx = x+ptrlength*cos(theta);
 endpty = y+ptrlength*sin(theta);
-b = plot([x endptx],[y endpty]);
+b = plot([x endptx],[y endpty],'k');
 
 end

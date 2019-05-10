@@ -23,7 +23,7 @@ yrange = (maxY-minY);
 figure
 initsw = 0;
 numpart = size(dataStore.particles(:,:,1),1);
-sensorOrigin = [0.187 0.018];
+sensorOrigin = [0.13 0];
 
 partTraj = [];
 
@@ -32,12 +32,12 @@ filename = 'testAnimated_fixed.gif';
 seeBeacInd = 1;
 tempglob = zeros(9,2);
 
-for i=1:length(dataStore.rsdepth(:,1))
+for i=1:length(dataStore.rsdepth(:,1))-1
     clf
     disp(i)
     hold on
     currtime = dataStore.rsdepth(i,1);
-    [~,I] = min(abs(truthLog.truthPose(:,1) - 3 - currtime));
+    [~,I] = min(abs(truthLog.truthPose(:,1) - 4.1 - currtime));
     for j=1:l
         a=plot([mapdata(j,1) mapdata(j,3)],[mapdata(j,2) mapdata(j,4)],'LineWidth',2,'Color','k','HandleVisibility','off');
     end
@@ -57,7 +57,7 @@ for i=1:length(dataStore.rsdepth(:,1))
     xpartmean = mean(dataStore.particles(:,1,i));
     ypartmean = mean(dataStore.particles(:,2,i));
     tpartmean = mean(dataStore.particles(:,3,i));
-    partTraj = [partTraj; [xpartmean ypartmean tpartmean]];
+    partTraj = dataStore.robotestimate(1:i,:);
     
     f=plot(truthLog.truthPose(1:I,2),truthLog.truthPose(1:I,3),'b');
     g=plot(partTraj(:,1),partTraj(:,2),'r');
@@ -67,18 +67,22 @@ for i=1:length(dataStore.rsdepth(:,1))
     
     firstnone = find(dataStore.timebeacon(i,:)==-1,1);
     beacnumb = (firstnone-1)/3;
-    if beacnumb = 0
-        dd
+    if beacnumb == 0
+        m=plot(20,20,'ro','MarkerFaceColor',[1 .6 .6]);
     else
-    for j=1:beacnumb
-        beacpoint = robot2global(truthLog.truthPose(I,2:4),dataStore.timebeacon(i,(j-1)*3+2:(j-1)*3+3));
-        m=plot(beacpoint(1),beacpoint(2),'ro','MarkerFaceColor',[1 .6 .6]);
-    end
+        for j=1:beacnumb
+            beacpoint = robot2global(truthLog.truthPose(I,2:4),dataStore.timebeacon(i,(j-1)*3+2:(j-1)*3+3));
+            m=plot(beacpoint(1),beacpoint(2),'ro','MarkerFaceColor',[1 .6 .6],'MarkerSize',10);
+        end
     end
     
-    for j=1:beacnumb
-        beacpoint = robot2global(partTraj(i,:),dataStore.timebeacon(i,(j-1)*3+2:(j-1)*3+3));
-        n=plot(beacpoint(1),beacpoint(2),'ro','MarkerFaceColor',[1 0 .6]);
+    if beacnumb == 0
+        n=plot(20,20,'ro','MarkerFaceColor',[1 0 .6]);
+    else
+        for j=1:beacnumb
+            beacpoint = robot2global(partTraj(i,:),dataStore.timebeacon(i,(j-1)*3+2:(j-1)*3+3));
+            n=plot(beacpoint(1),beacpoint(2),'ro','MarkerFaceColor',[1 0 .6],'MarkerSize',10);
+        end
     end
     
     
@@ -116,7 +120,7 @@ for i=1:length(dataStore.rsdepth(:,1))
     ax.Units = 'pixels';
     pos = ax.Position;
     ti = ax.TightInset;
-    rect = [-ti(1), -ti(2), 1.05*(pos(3)+ti(1)+ti(3)), pos(4)+ti(2)+ti(4)];
+    rect = [-ti(1), -ti(2), 1.5*(pos(3)+ti(1)+ti(3)), pos(4)+ti(2)+ti(4)];
     F = getframe(ax,rect);
     [A,map] = rgb2ind(frame2im(F),256);
     
