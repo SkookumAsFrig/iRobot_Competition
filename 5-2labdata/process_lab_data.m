@@ -2,7 +2,7 @@ clc
 clear all
 close all
 
-load('goodrun3_5-2-19.mat')
+load('goodrun2_5-2-19.mat')
 map = 'compMap_mod.mat';
 mapstruct = importdata(map);
 beaconmat = mapstruct.beaconLoc;
@@ -29,21 +29,21 @@ filename = 'testAnimated_fixed.gif';
 seeBeacInd = 1;
 tempglob = zeros(9,2);
 
-for i=1:length(dataStore.truthPose(:,1))
+for i=1:50
     clf
     disp(i)
     hold on
     
     for j=1:l
-        plot([mapdata(j,1) mapdata(j,3)],[mapdata(j,2) mapdata(j,4)],'LineWidth',2,'Color','k','HandleVisibility','off')
+        a=plot([mapdata(j,1) mapdata(j,3)],[mapdata(j,2) mapdata(j,4)],'LineWidth',2,'Color','k','HandleVisibility','off');
     end
     for e=1:o
-        plot(beaconmat(e,2),beaconmat(e,3),'rp','MarkerFaceColor','r')
+        b=plot(beaconmat(e,2),beaconmat(e,3),'rp','MarkerFaceColor','r');
         text(beaconmat(e,2),beaconmat(e,3),num2str(beaconmat(e,1)))
     end
     
     for k=1:1:numpart
-        drawparticle(dataStore.particles(k,1,i),dataStore.particles(k,2,i),dataStore.particles(k,3,i));
+        c=drawparticle(dataStore.particles(k,1,i),dataStore.particles(k,2,i),dataStore.particles(k,3,i));
     end
     
     xpartmean = mean(dataStore.particles(:,1,i));
@@ -51,36 +51,43 @@ for i=1:length(dataStore.truthPose(:,1))
     tpartmean = mean(dataStore.particles(:,3,i));
     partTraj = [partTraj; [xpartmean ypartmean tpartmean]];
     
-    plot(dataStore.truthPose(1:i,2),dataStore.truthPose(1:i,3),'b')
-    plot(partTraj(:,1),partTraj(:,2),'r')
+    d=plot(dataStore.truthPose(1:i,2),dataStore.truthPose(1:i,3),'b');
+    f=plot(partTraj(:,1),partTraj(:,2),'r');
     
-    drawparticlestar_red(xpartmean,ypartmean,tpartmean);
-    drawparticlestar(dataStore.truthPose(i,2),dataStore.truthPose(i,3),dataStore.truthPose(i,4));
+    g=drawparticlestar_red(xpartmean,ypartmean,tpartmean);
+    h=drawparticlestar(dataStore.truthPose(i,2),dataStore.truthPose(i,3),dataStore.truthPose(i,4));
     
     firstnone = find(dataStore.timebeacon(i,:)==-1,1);
     beacnumb = (firstnone-1)/3;
-    for j=1:beacnumb
-        beacpoint = robot2global(dataStore.truthPose(i,2:4),dataStore.timebeacon(i,(j-1)*3+2:(j-1)*3+3));
-        plot(beacpoint(1),beacpoint(2),'ro','MarkerFaceColor',[1 .6 .6]);
+    if beacnumb == 0
+        m=plot(20,20,'ro','MarkerFaceColor',[1 .6 .6]);
+    else
+        for j=1:beacnumb
+            beacpoint = robot2global(dataStore.truthPose(i,2:4),dataStore.timebeacon(i,(j-1)*3+2:(j-1)*3+3));
+            m=plot(beacpoint(1),beacpoint(2),'ro','MarkerFaceColor',[1 .6 .6],'MarkerSize',10);
+        end
     end
     
-    for j=1:beacnumb
-        beacpoint = robot2global(partTraj(i,:),dataStore.timebeacon(i,(j-1)*3+2:(j-1)*3+3));
-        plot(beacpoint(1),beacpoint(2),'ro','MarkerFaceColor',[1 0 .6]);
+    if beacnumb == 0
+        n=plot(20,20,'ro','MarkerFaceColor',[1 0 .6]);
+    else
+        for j=1:beacnumb
+            beacpoint = robot2global(partTraj(i,:),dataStore.timebeacon(i,(j-1)*3+2:(j-1)*3+3));
+            n=plot(beacpoint(1),beacpoint(2),'ro','MarkerFaceColor',[1 0 .6],'MarkerSize',10);
+        end
     end
-    
     
     depthR = dataStore.rsdepth(i,3:end);
     depthXY = depth2xy(depthR, sensorOrigin);
     for j=1:9
         tempglob(j,:) = robot2global(dataStore.truthPose(i,2:4),[depthXY(1,j) depthXY(2,j)]);
     end
-    plot(tempglob(:,1),tempglob(:,2),'*');
+    y=plot(tempglob(:,1),tempglob(:,2),'*');
     
     for j=1:9
         tempglob(j,:) = robot2global(partTraj(i,:),[depthXY(1,j) depthXY(2,j)]);
     end
-    plot(tempglob(:,1),tempglob(:,2),'*');
+    p=plot(tempglob(:,1),tempglob(:,2),'*');
     
     x0=300;
     y0=300;
@@ -88,10 +95,17 @@ for i=1:length(dataStore.truthPose(:,1))
     height=600;
     set(gcf,'position',[x0,y0,width,height])
     xlim([-3, 3]);
-    ylim([-2.5, 2.5]);
+    ylim([-3.5, 3.5]);
     
+    legend([a b c d f g h m n y p],'Map','Beacons','Particles','truthPose Trajectory','Robot Estimate Trajectory',...
+        'Robot Estimate','truthPose','truthPose View of Beacon','Robot Estimate of Beacon',...
+        'truthPose Depth','Robot Estimate Depth','Location','northeastoutside')
     
     title(['Time is ',num2str(i)])
+    
+    xlabel('Global X (m)')
+    ylabel('Global Y (m)')
+    
     ax = gca;
     ax.Units = 'pixels';
     pos = ax.Position;
