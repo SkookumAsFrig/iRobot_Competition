@@ -1,0 +1,17 @@
+map = 'compMap_mod.mat';
+mapstruct = importdata(map);
+mapdata = mapstruct.map;
+[mapsize,~] = size(mapdata);
+maxX = max([max(mapdata(:,1)) max(mapdata(:,3))]);
+maxY = max([max(mapdata(:,2)) max(mapdata(:,4))]);
+minX = min([min(mapdata(:,1)) min(mapdata(:,3))]);
+minY = min([min(mapdata(:,2)) min(mapdata(:,4))]);
+xrange = (maxX-minX);
+yrange = (maxY-minY);
+limits = [minX minY maxX maxY];
+sampling_handle = @(limits) uniformresample(limits);
+nowp = robotestimate(1,1:2);
+radius = 0.25;
+stepsize = 0.3;
+currwp1 = currwp(1,1:2);
+[newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,currwp1,stepsize,radius);

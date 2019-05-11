@@ -40,7 +40,7 @@ wt = zeros(ldp,1);
 wtbeacon = zeros(m,1);
 wtDR = ones(3,1);
 for i=1:ldp
-    wt(i) = normpdf(zt(i),depth(i),sqrt(0.001));
+    wt(i) = normpdf(zt(i),depth(i),sqrt(0.01));
 end
 
 if DRweight ~= 0
@@ -52,7 +52,7 @@ end
 
 highprob = 1;
 lowprob = 0.000001;
-beacondistW = sqrt(0.001);
+beacondistW = sqrt(0.01);
 bclabels = beacondata(1:3:end);
 
 for i=1:m
