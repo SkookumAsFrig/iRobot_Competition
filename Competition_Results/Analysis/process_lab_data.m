@@ -4,6 +4,7 @@ close all
 
 load('team14_run1_truth.mat')
 load('Team14Try1.mat')
+% load('goodSimulatorRun.mat')
 map = 'CompMap.mat';
 mapstruct = importdata(map);
 beaconmat = mapstruct.beaconLoc;
@@ -12,6 +13,10 @@ ECwaypoint = mapstruct.ECwaypoints;
 [o,~] = size(beaconmat);
 mapdata = dataStore.finalmap;
 [l,~] = size(mapdata);
+
+period = mean(diff(dataStore.rsdepth(2:end,1)));
+freq = 1/period;
+
 maxX = max([max(mapdata(:,1)) max(mapdata(:,3))]);
 maxY = max([max(mapdata(:,2)) max(mapdata(:,4))]);
 minX = min([min(mapdata(:,1)) min(mapdata(:,3))]);

@@ -17,6 +17,9 @@ minY = min([min(mapdata(:,2)) min(mapdata(:,4))]);
 xrange = (maxX-minX);
 yrange = (maxY-minY);
 
+period = mean(diff(dataStore.rsdepth(2:end,1)));
+freq = 1/period;
+
 figure
 initsw = 0;
 numpart = size(dataStore.particles(:,:,1),1)
