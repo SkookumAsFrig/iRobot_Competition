@@ -18,7 +18,7 @@ limits = [minX minY maxX maxY];
 
 figure
 
-obstacles = wall2polygon(mapdata,0.27);
+obstacles = wall2polygon_opt(mapdata,0.29);
 obstacles = obstacles(5:end,:);
 g = size(obstacles,1);
 edges = zeros(g*4,4);
@@ -33,7 +33,7 @@ axis equal
 [m,n] = size(mapdata);
 mapext = zeros(m-4,n);
 for i=1:m-4
-    mapext(i,:) = extendedge(mapdata(i+4,:), 0.26);
+    mapext(i,:) = extendedge(mapdata(i+4,:), 0.27);
 end
 
 %start = [-2 1];

@@ -16,8 +16,8 @@ init = [-4 -3];
 goal = [3.5 3];
 % goal = [1.5 1.5];
 % goal = [0 -1];
-goal2 = [-1 -3.5];
-goal3 = [-4.5 3.5];
+goal2 = [2.5 -3.5];
+goal3 = [-0.5 3.5];
 start_goal = [init;goal];
 
 figure
@@ -30,19 +30,23 @@ axis equal
 
 %sampling_handle = @(limits,lastind) lowdisp_resample(limits,lastind);
 sampling_handle = @(limits) uniformresample(limits);
-stepsize = 0.2;
+stepsize = 0.3;
 radius = 0.25;
 numbGoals = 3;
 % [newV,newconnect_mat,cost,path,pathpoints] = buildBIRRT(workspacetxt,limits,sampling_handle,init,goal,stepsize,radius);
 [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2,timeup] ...
     = buildQuadRRT(workspacetxt,limits,sampling_handle,init,goal,goal2,goal3,stepsize,radius,numbGoals);
-plot(pathpoints(:,1),pathpoints(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1])
+d = plot(pathpoints(:,1),pathpoints(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1]);
 
 plot(newV(:,1),newV(:,2),'k*')
 
-plot(init(1),init(2),'ko','MarkerFaceColor',[1 0 0])
-plot(goal(1),goal(2),'ko','MarkerFaceColor',[0 1 0])
+e=plot(init(1),init(2),'ko','MarkerFaceColor',[1 0 0]);
+goals = [goal;goal2;goal3];
+f=plot(goals(:,1),goals(:,2),'ko','MarkerFaceColor',[0 1 0]);
 
-title('Workspace and Bi-Directional RRT, Uniform Random')
+legend([a expath expoint d e f], 'Map', 'Tree Branch', 'Tree Node', 'Path',...
+    'Start', 'Goal', 'location','northeastoutside')
+
+title('Workspace and Quadruple RRT (stepsize 0.3, radius 0.25), Uniform Random')
 xlabel('Global X')
 ylabel('Global Y')
