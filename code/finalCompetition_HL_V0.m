@@ -1,4 +1,4 @@
-function[dataStore] = finalCompetition_HL_V2(CreatePort,DistPort,TagPort,tagNum,maxTime)
+function[dataStore] = finalCompetition_HL_V0(CreatePort,DistPort,TagPort,tagNum,maxTime)
 %
 %   dataStore = backupBump(CreatePort,DistPort,TagPort,tagNum,maxTime) runs
 %
@@ -93,11 +93,9 @@ twinPtsNum = size(wallTwinPts,1);
 ECwaypoints = mapstruct.ECwaypoints;
 ECwptsNum = size(ECwaypoints,1);
 %% All Waypoints Set
-% wpts_combo = [waypoints, ones(wptsNum,1);
-%     ECwaypoints, 2*ones(ECwptsNum,1);
-%     wallTwinPts, [3:twinPtsNum+2]'];
 wpts_combo = [waypoints, ones(wptsNum,1);
     ECwaypoints, 2*ones(ECwptsNum,1)];
+%    wallTwinPts, [3:twinPtsNum+2]'];
 wpts_go = wpts_combo;
 % goalp = [2.33 0.82;
 %          2.16 -1.03;
@@ -163,13 +161,9 @@ inititer = 0;
 arrived = 1;
 
 stop = 0;
-
-global wallcross
-global wallblock
-gg = size(mapstruct.optWalls,1);
-wallcross = zeros(gg,1);
-
-
+global nomore
+nomore = 0;
+ 
 %% Back & Turn
 cmdV_back = -0.1;
 cmdW_turn = -0.2;
@@ -180,17 +174,12 @@ stillBump = [];
 accum_initw = zeros(wptsNum,1);
 spinAgain = 0;
 
-<<<<<<< HEAD
 %% Wall Detect
 optwallsize = size(mapstruct.optWalls,1);
-wallcross = zeros(1,optwallsize);
-wcsw = zeros(1, optwallsize);
-wallblock = zeros(1,optwallsize)
-=======
-
-%% Wall Detect
-del = 0;
->>>>>>> cdfcf5c111235417a573f58fed22c90370112e84
+wallcross = zeros(optwallsize,1);
+sw = zeros(optwallsize,1);
+wallblock = zeros(optwallsize,1);
+del = 1;    % signal indicates when to delete wall
 
 % PLOT MAP & BEACONS
 figure(1)
@@ -235,10 +224,10 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 newdata = reshape(dataStore.beacon(end-newpsize:end,3:5)',1,[]);
                 newdata = padarray(newdata,[0 3*beaconsize-length(newdata)],-1,'post');
                 dataStore.timebeacon = [dataStore.timebeacon; newdata];
-                %disp("same beacon!")
+             %   disp("same beacon!")
             else
                 dataStore.timebeacon = [dataStore.timebeacon; repmat([-1,0,0],1,beaconsize)];
-                %disp("no beacon!")
+              %  disp("no beacon!")
             end
         end
     else % SEE BEACON
@@ -246,7 +235,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
         newdata = reshape(dataStore.beacon(end-newpsize:end,3:5)',1,[]);
         newdata = padarray(newdata,[0 3*beaconsize-length(newdata)],-1,'post');
         dataStore.timebeacon = [dataStore.timebeacon; newdata];
-        %disp("I see beacon!")
+       % disp("I see beacon!")
     end
     
     % CHECK IF REALLY SEE BEACON(> SEETIMES)
@@ -284,7 +273,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
     %% PARTICLES SAMPLING (SAMPLING STATE MACHINE)
     %% STATE 0: INIT PARTICLES SET
     if initsw == 0
-        %disp("first run");
+%         disp("first run");
         % Initialization
         dataStore.beacon = [0,0,-1,0,0,0];      % beacon data
         oriPose = dataStore.odometry(1,3);      % current robot direction
@@ -298,9 +287,9 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
         % To STATE 1
         initsw = 1;
         
-        %% STATE 1: PF Waypoints INIT (initsw = 1)
+    %% STATE 1: PF Waypoints INIT (initsw = 1)
     elseif initsw == 1
-        %disp("PF init");
+%         disp("PF init");
         ctrl = [dvec phivec];
         zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) dataStore.deadreck(end,:)]';
         
@@ -314,12 +303,12 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
         reinit_handle = @() resample(mapdata,numpart);
         [M_final,Mt,initw]= particleFilter_init(M_init,ctrl,zt,ctrl_handle,w_handle,o_handle,reinit_handle,eachnumpart);
         accum_initw = accum_initw+initw;
-        %disp(accum_initw);
+%         disp(accum_initw);
         dataStore.particles = cat(3,dataStore.particles,M_final);
-        
-        %% STATE 2: RUNNING PF (initsw = 2)
+    
+    %% STATE 2: RUNNING PF (initsw = 2)
     else
-        %disp("running PF");
+%         disp("running PF");
         ctrl = [dvec phivec];
         zt = [dataStore.rsdepth(end,3:end) dataStore.timebeacon(end,:) dataStore.deadreck(end,:)]';
         
@@ -365,11 +354,11 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
     if noRobotCount >= 3
         SetFwdVelAngVelCreate(CreatePort, 0,0);
         stop = 1;
-        %% STATE 1: SPIN BEFORE MOVE
+    %% STATE 1: SPIN BEFORE MOVE
     elseif spinsw <= 1
         % STATE 1.1: START SPINNING (spinsw = 0)
         if spinsw == 0
-            %disp("waypoint spinning");
+%             disp("waypoint spinning");
             SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW);
             stop = 0;
             spinSum = spinSum + dataStore.odometry(end,3);
@@ -383,15 +372,15 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 spinsw = 1;  % spinsw: 0 -> 1
                 spinDone = 0;
             end
-            
-            % STATE 1.2: KEEP SPINNING (spinsw = 1)
+
+        % STATE 1.2: KEEP SPINNING (spinsw = 1)
         else
             % STATE 1.2.1: STOP WHEN A BEACON IN VIEW
             spinSum = spinSum + dataStore.odometry(end,3);
             if dataStore.timebeacon(end,1) ~= -1 %%&& abs(dataStore.timebeacon(end,3)) <= 0.2 % see beacon
                 noiseprofile = [sqrt(0.005) sqrt(0.005) sqrt(pi/2)];
                 inititer = inititer+1;
-                %disp("stopped and I see beacon!")
+%                 disp("stopped and I see beacon!")
                 if startTimer == 0  % start counting staring sec
                     DRweight = 0;
                     SetFwdVelAngVelCreate(CreatePort, 0, 0 );
@@ -400,14 +389,14 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                     startTimer = 1;
                 else % staring time up
                     if toc - timer1 > stareTime_L
-                        %disp("4 seconds passed")
+%                         disp("4 seconds passed")
                         spinsw = spinsw + 1;  % spinsw: 1 -> 2
                         noiseprofile = [sqrt(0.002) sqrt(0.002) sqrt(0.01)];
                         DRweight = 0.000005;
                         initsw = 2; % launch PF running
                         seeTimes = 10;
                     elseif toc - timer1 > stareTime_S || inititer > 2
-                        %disp("first stage passed")
+%                         disp("first stage passed")
                         DRweight = 0;
                         initsw = 2;
                     end
@@ -433,15 +422,15 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                     seeTimes = 10;
                 end
             else
-                %disp("no beacon in view!");
+%                 disp("no beacon in view!");
             end
         end
         
-        %% STATE 2: MOVE
+    %% STATE 2: MOVE
     elseif spinsw == 2
         % STATE 2.1: PRM PLANNING
         if plan==0
-            %disp("planning")
+%             disp("planning")
             % PLOT-----------------------------------
             figure(2)
             hold on
@@ -462,22 +451,25 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             % PRM Planner
             if ~isempty(wpts_go)%nextwaypoint <= size(wpts_go)
                 % currwp = wpts_go(nextwaypoint,1:2);
-                %                 [currwp,type] = findNeareastPoints(robotestimate(1,1:3),wpts_go,3);
-                nowp = robotestimate(1:2);
+%                 [currwp,type] = findNeareastPoints(robotestimate(1,1:3),wpts_go,3);
+                nowp = robotestimate(1,1:2);
                 obstacles = wall2polygon(mapdata,0.27);
-                %                 [cost,wpts] = findPath(obstacles,limits,currwp,nowp,mapdata,0.26);
+%                 [cost,wpts] = findPath(obstacles,limits,currwp,nowp,mapdata,0.26);
                 [cost,wpts] = findPath(obstacles,limits,wpts_go(:,1:2),nowp,mapdata,0.26);
                 
+                if wpts(1) == Inf && wpts(2) == Inf
+                    nomore = 1;
+                end
+
+                 currwp = wpts(end,1:2);
+                 currtype = findPtType(currwp, wpts_go);
+%                [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2,timeup] ...
+%     = buildQuadRRT(map,limits,sampling_handle,nowp,currwp(1,1:2),currwp(2,1:2),currwp(3,1:2),stepsize,radius,3);
+               
                 
-                currwp = wpts(end,1:2);
-                currtype = findPtType(currwp, wpts_go);
-                %                [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2,timeup] ...
-                %     = buildQuadRRT(map,limits,sampling_handle,nowp,currwp(1,1:2),currwp(2,1:2),currwp(3,1:2),stepsize,radius,3);
-                
-                
-                %                 [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,currwp(1,1:2),stepsize,radius);
-                %                 disp("heading to:",num2str(currwp(1,1:2)));
-                
+%                 [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,currwp(1,1:2),stepsize,radius);
+%                 disp("heading to:",num2str(currwp(1,1:2)));
+
                 plot(wpts(:,1),wpts(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1])
                 axis equal
                 %                [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2,timeup] ...
@@ -485,21 +477,21 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 
                 
                 %                 [newV,newconnect_mat,cost,path,pathpoints,expath,expoint,expath2,expoint2] = buildBIRRT(map,limits,sampling_handle,nowp,currwp(1,1:2),stepsize,radius);
-                
-                %disp(['Heading to next waypoint:' currwp]);
-                %                 disp(currwp);
+
+                disp(['Heading to next waypoint:' currwp]);
+%                 disp(currwp);
                 % PLOT-----------------------------------
                 %d=plot(pathpoints(:,1),pathpoints(:,2),'mo-','LineWidth',2,'MarkerFaceColor',[1 0 1]);
                 e=plot(nowp(1),nowp(2),'ko','MarkerFaceColor',[1 0 0]);
                 f=plot(currwp(1),currwp(2),'ko','MarkerFaceColor',[0 1 0]);
-                
+
                 plan=1;
                 %wpts = pathpoints;
                 [m,~] = size(wpts);
             else
                 finishAll = 1;
             end
-            % STATE 2.2: VISIT WAYPOINTS
+        % STATE 2.2: VISIT WAYPOINTS
         elseif plan == 1
             % Get current pose
             x = xpartmean;
@@ -549,18 +541,17 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                     startTimer = 0; % reset timer
                     plan= 0; % rrt plan again
                     gotopt = 1;                     % go to point again
-                     del = 0;
                 end
                 SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW);
             end
-            %% STATE 2.3: BACKUP & TURN
+        %% STATE 2.3: BACKUP & TURN
         else
             if backStart == 1
                 SetFwdVelAngVelCreate(CreatePort, cmdV_back, 0);
                 stop = 0;
                 backSum = backSum + dataStore.odometry(end,2);
                 if abs(backSum) > 0.2
-                    %disp("backup done");
+%                     disp("backup done");
                     SetFwdVelAngVelCreate(CreatePort, 0, 0);
                     stop = 1;
                     turnStart = 1;
@@ -574,7 +565,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 stillBump = [stillBump,realWall];
                 backStart = 0;
                 if abs(turnSum) > pi
-                    %disp("turn done")
+%                     disp("turn done")
                     SetFwdVelAngVelCreate(CreatePort, 0, 0);
                     stop = 1;
                     if sum(stillBump) > 0 % check bump sensor again
@@ -582,7 +573,8 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                         turnStart = 0;
                         backSum = 0;
                         turnSum = 0;
-                        %disp("bump again!");
+                        stillBump = 0;
+%                         disp("bump again!");
                     else
                         turnStart = 0;
                         initsw = 2;
@@ -592,7 +584,8 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                         plan = 0;
                         inititer = 0;
                         gotopt = 1;
-                        %disp("replanning");
+                        stillBump = 0;
+%                         disp("replanning");
                     end
                 else
                     if sum(stillBump) > 0
@@ -600,16 +593,17 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                         turnStart = 0;
                         backSum = 0;
                         turnSum = 0;
-                        %disp("turn bump!");
+                        stillBump = [];
+%                         disp("turn bump!");
                     end
                 end
             end
         end
-        %% STATE 3: SPIN AGAIN (spinsw == 3)
+    %% STATE 3: SPIN AGAIN (spinsw == 3)
     elseif spinsw == 3
         % STATE 3.1: START SPINNING
         if spinAgain == 1
-            %disp("waypoint spinning+");
+            disp("waypoint spinning+");
             SetFwdVelAngVelCreate(CreatePort, cmdV, cmdW);
             stop = 0;
             spinSum = spinSum + dataStore.odometry(end,3);
@@ -619,17 +613,17 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                 spinDone = 1;
             end
             if(spinDone == 1)   % spinning complete
-                spinAgain = 2;
+                spinAgain = 2;  
                 spinDone = 0;
             end
-            % STATE 3.2: KEEP SPINNING (spinAgain = 2)
+        % STATE 3.2: KEEP SPINNING (spinAgain = 2)
         else
             spinSum = spinSum + dataStore.odometry(end,3);
             if dataStore.timebeacon(end,1) ~= -1 %%&& abs(dataStore.timebeacon(end,3)) <= 0.15
                 noiseprofile = [sqrt(0.005) sqrt(0.005) sqrt(pi/2)];
                 inititer = inititer+1;
                 if startTimer == 0  % start counting staring sec
-                    %disp("stopped and I see beacon!+")
+%                     disp("stopped and I see beacon!+")
                     DRweight = 0;
                     SetFwdVelAngVelCreate(CreatePort, 0, 0 );
                     stop = 1;
@@ -637,20 +631,20 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                     startTimer = 1;
                 else % staring time up
                     if toc - timer1 > stareTime_L
-                        %disp("4 seconds passed+")
+%                         disp("4 seconds passed+")
                         spinsw = 4;  % spinsw: 3 -> 2
                         noiseprofile = [sqrt(0.002) sqrt(0.002) sqrt(0.01)];
                         DRweight = 0.0000005;
                         initsw = 2; % launch PF running
                         seeTimes = 10;
                     elseif toc - timer1 > stareTime_S || inititer > 1
-                        %disp("first stage passed+")
+%                         disp("first stage passed+")
                         DRweight = 0;
                         initsw = 2;
                     end
                 end
             elseif abs(spinSum) >= pi
-                %disp("180 turned")
+%                 disp("180 turned")
                 if startTimer == 0
                     DRweight = 0;
                     SetFwdVelAngVelCreate(CreatePort, 0, 0 );
@@ -670,69 +664,37 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
                     seeTimes = 10;
                 end
             else
-                %disp("no beacon in view!+");
+%                 disp("no beacon in view!+");
             end
         end
-        %% STATE 4: CALIBRATION (spinsw == 4)
+    %% STATE 4: CALIBRATION (spinsw == 4)
     elseif spinsw == 4
-        gap = findEuclideanDistance(robotestimate(1,1:2),currwp);
-        if (gap > closeEnough) % replan path for current goal
-            %disp("calibrate");
-            arrived = 0;
-        else % replan path for the next goal
-            %disp("close enough");
-            arrived = 1;
-        end
         if currtype <= 2
+            gap = findEuclideanDistance(robotestimate(1,1:2),currwp);
+            if (gap > closeEnough) % replan path for current goal
+                disp("calibrate");
+                arrived = 0;
+            else % replan path for the next goal
+                disp("close enough");
+                BeepRoomba(CreatePort);
+                arrived = 1;
+            end
             spinsw = 2;
         else
             spinsw = 5;
-        end
-        %% STATE 5: DETECT WALL
+        end         
+    %% STATE 5: VOID
     else
-        spinsw = 2;
+       spinsw = 2;
     end
     % #####################CONTROL END#######################
-<<<<<<< HEAD
     
-    figure(1)
-    drawnow
-    if initsw>1
-        %% WALL DETECT
-        
-        for op=1:optwallsize
-            [crossnumb,blocknumb] = howmanycross(robotestimate, sensorOrigin, dataStore.rsdepth(end,3:end), optionalW(op,:));
-            wallcross(op) = wallcross(op)+crossnumb;
-            wallblock(op) = wallblock(op)+blocknumb;
-            if wallcross(op) > 15 && wallblock(op) < wallcross(op) && wcsw(op) == 0
-                wcsw(op) = 1;
-                plot(optionalW(op,1:2:end),optionalW(op,2:2:end),'w','LineWidth',2)
-                addwalls = [];
-                for ip=1:optwallsize
-                    if wcsw(ip) == 0
-                        addwalls = [addwalls; optionalW(ip,:)];
-                    end
-                end
-                mapdata = [mapstruct.map; addwalls];
-            elseif wallblock(op) > 15 && wallblock(op) > wallcross(op) && wcsw(op) == 0
-                wcsw(op) = 1;
-                plot(optionalW(op,1:2:end),optionalW(op,2:2:end),'r','LineWidth',2);
-                addwalls = [];
-                for ip=1:optwallsize
-                    if wcsw(ip) == 0
-                        addwalls = [addwalls; optionalW(ip,:)];
-                    end
-                end
-                mapdata = [mapstruct.map; addwalls];
-            end
-        end
-        disp(['number of cross is' num2str(wallcross)])
-        disp(['number of block is' num2str(wallblock)])
-    end
-=======
+    %% WALL DETECT
     global currwall
     global curroptwall
-    currwall = size(mapdata,1)-knownsize; 
+    global twinPts
+    global addPts
+    currwall = size(mapdata,1)-knownsize;
     curroptwall = mapdata(end-currwall+1:end,:);
     if currwall ~= 0
         wallID = [];
@@ -750,51 +712,68 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
             end
         end
         %    disp(['Closest Wall: ' num2str(wallID)]);
-        disp(['Closest Wall: ' wallID]);
+%         disp(['Closest Wall: ' num2str(wallID)]);
         [crossnumb,blocknumb] = howmanycross(robotestimate, sensorOrigin, dataStore.rsdepth(end,3:end), curroptwall(wallID,:));
         wallcross(wallID,:) = wallcross(wallID,:)+crossnumb;
-%         wallblock(wallID,:) = wallblock(wallID,:)+blocknumb;
+        wallblock(wallID,:) = wallblock(wallID,:)+blocknumb;
         disp(['number of cross is ' num2str(wallcross')])
-%         disp(['number of block is' num2str(wallblock')])
-        if wallcross(wallID)>20 && del == 0
+        disp(['number of block is' num2str(wallblock')])
+        if wallcross(wallID)>15 && wallcross(wallID) > wallblock(wallID) && sw(wallID) == 0
             plot(curroptwall(wallID,1:2:end),curroptwall(wallID,2:2:end),'w','LineWidth',2);
             mapdata = [knownwall; curroptwall];     % reload all wals
             mapdata(knownsize+wallID,:) = [];
             wallcross(wallID,:) = [];  % delete a wall, reduce vector size
+            wallblock(wallID,:) = [];
+            sw(wallID,:) = [];
             wallcross = zeros(size(wallcross,1),1);
-            del = 1;
+            wallblock = zeros(size(wallblock,1),1);
+            sw = zeros(size(sw,1),1);
             disp("Delete Wall");
+        elseif wallcross(wallID) == 0 && wallblock(wallID) == 0 && sw(wallID) == 0 && nomore == 1
+            nomore = 0;
+            twinPts = findOptWallTwinPts(curroptwall(wallID,:),0.32);
+            twin1 = twinPts(1,:);
+            twin2 = twinPts(2,:);
+            exist = 0;
+            for i = 1:size(wpts_go,1)
+                if i < size(wpts_go,1)
+                    if twin1(1) == wpts_go(i,1) && twin1(2) == wpts_go(i,2)
+                        if twin2(1) == wpts_go(i+1,1) && twin2(2) == wpts_go(i+1,2)
+                            exist = 1;
+                            break;
+                        end
+                    end
+                end
+            end
+            if exist == 0
+                type = wpts_go(end,3);
+                if type < 3
+                    pt1 = [twinPts(1,:),3];
+                    pt2 = [twinPts(2,:),4];
+                    addPts = [pt1;pt2];
+                elseif type >=3
+                    pt1 = [twinPts(1,:),type+1];
+                    pt2 = [twinPts(2,:),type+2];
+                    addPts = [pt1;pt2];
+                end
+                wpts_go = [wpts_go; addPts];
+                disp("Add Twins");
+            end
+        elseif wallblock(wallID) > 15 && wallblock(wallID) > wallcross(wallID) && sw(wallID)==0
+            sw(wallID) = 1;
+            plot(curroptwall(wallID,1:2:end),curroptwall(wallID,2:2:end),'r','LineWidth',2);
+            disp("Keep Wall");
         end
     else
         disp("No Optional Wall Left!");
-    end
+    end   
+    
+    
+    
+    
+    % PLOT-----------------------------------
     figure(1)
     drawnow
-%     for op=1:gg
-%         [crossnumb,blocknumb] = howmanycross(robotestimate, sensorOrigin, dataStore.rsdepth(end,3:end), optionalW(op,:));
-%         wallcross(op) = wallcross(op)+crossnumb;
-%         wallblock(op) = wallblock(op)+blocknumb;
-%         if wallcross(op) > 20 && wcsw(op) == 0
-%             wcsw(op) = 1;
-%             plot(optionalW(op,1:2:end),optionalW(op,2:2:end),'w','LineWidth',2)
-%             addwalls = [];
-%             for ip=1:gg
-%                 if wcsw(ip) == 0
-%                     addwalls = [addwalls; optionalW(ip,:)];
-%                 end
-%             end
-%             mapdata = [mapstruct.map; addwalls];
-%         end
-%         if wallblock(op) > wallcross(op)
-%             wpsw(op) = 1;
-%             plot(optionalW(op,1:2:end),optionalW(op,2:2:end),'r','LineWidth',2);
-%         end
-%     end
-%     disp(['number of cross is' num2str(wallcross)])
-%      disp(['number of block is' num2str(wallblock)])
->>>>>>> cdfcf5c111235417a573f58fed22c90370112e84
-    % PLOT-----------------------------------
-    
     [x, z, c, v] = drawparticlestar(dataStore.truthPose(end,2),dataStore.truthPose(end,3),dataStore.truthPose(end,4));
     [h, i] = drawparticlestar_red(xpartmean,ypartmean,tpartmean);
     [qw, wq] = drawparticlestar_green(dataStore.deadreck(end,1),dataStore.deadreck(end,2),dataStore.deadreck(end,3));
