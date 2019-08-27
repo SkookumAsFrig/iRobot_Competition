@@ -180,9 +180,17 @@ stillBump = [];
 accum_initw = zeros(wptsNum,1);
 spinAgain = 0;
 
+<<<<<<< HEAD
+%% Wall Detect
+optwallsize = size(mapstruct.optWalls,1);
+wallcross = zeros(1,optwallsize);
+wcsw = zeros(1, optwallsize);
+wallblock = zeros(1,optwallsize)
+=======
 
 %% Wall Detect
 del = 0;
+>>>>>>> cdfcf5c111235417a573f58fed22c90370112e84
 
 % PLOT MAP & BEACONS
 figure(1)
@@ -685,6 +693,43 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
         spinsw = 2;
     end
     % #####################CONTROL END#######################
+<<<<<<< HEAD
+    
+    figure(1)
+    drawnow
+    if initsw>1
+        %% WALL DETECT
+        
+        for op=1:optwallsize
+            [crossnumb,blocknumb] = howmanycross(robotestimate, sensorOrigin, dataStore.rsdepth(end,3:end), optionalW(op,:));
+            wallcross(op) = wallcross(op)+crossnumb;
+            wallblock(op) = wallblock(op)+blocknumb;
+            if wallcross(op) > 15 && wallblock(op) < wallcross(op) && wcsw(op) == 0
+                wcsw(op) = 1;
+                plot(optionalW(op,1:2:end),optionalW(op,2:2:end),'w','LineWidth',2)
+                addwalls = [];
+                for ip=1:optwallsize
+                    if wcsw(ip) == 0
+                        addwalls = [addwalls; optionalW(ip,:)];
+                    end
+                end
+                mapdata = [mapstruct.map; addwalls];
+            elseif wallblock(op) > 15 && wallblock(op) > wallcross(op) && wcsw(op) == 0
+                wcsw(op) = 1;
+                plot(optionalW(op,1:2:end),optionalW(op,2:2:end),'r','LineWidth',2);
+                addwalls = [];
+                for ip=1:optwallsize
+                    if wcsw(ip) == 0
+                        addwalls = [addwalls; optionalW(ip,:)];
+                    end
+                end
+                mapdata = [mapstruct.map; addwalls];
+            end
+        end
+        disp(['number of cross is' num2str(wallcross)])
+        disp(['number of block is' num2str(wallblock)])
+    end
+=======
     global currwall
     global curroptwall
     currwall = size(mapdata,1)-knownsize; 
@@ -747,6 +792,7 @@ while toc < Inf && finishAll~=1  % WITHIN SETTING TIME & LAST WAYPOINT IS NOT RE
 %     end
 %     disp(['number of cross is' num2str(wallcross)])
 %      disp(['number of block is' num2str(wallblock)])
+>>>>>>> cdfcf5c111235417a573f58fed22c90370112e84
     % PLOT-----------------------------------
     
     [x, z, c, v] = drawparticlestar(dataStore.truthPose(end,2),dataStore.truthPose(end,3),dataStore.truthPose(end,4));
