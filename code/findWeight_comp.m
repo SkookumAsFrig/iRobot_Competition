@@ -40,19 +40,19 @@ wt = zeros(ldp,1);
 wtbeacon = zeros(m,1);
 wtDR = ones(3,1);
 for i=1:ldp
-    wt(i) = normpdf(zt(i),depth(i),sqrt(0.001));
+    wt(i) = normpdf(zt(i),depth(i),sqrt(0.01));
 end
 
 if DRweight ~= 0
-    wtDR(1) = normpdf(robotPose(1),deadreck(1),sqrt(0.001));
-    wtDR(2) = normpdf(robotPose(2),deadreck(2),sqrt(0.001));
-    wtDR(3) = normpdf(robotPose(3),deadreck(3),sqrt(0.001));
+    wtDR(1) = normpdf(robotPose(1),deadreck(1),sqrt(0.05));
+    wtDR(2) = normpdf(robotPose(2),deadreck(2),sqrt(0.05));
+    wtDR(3) = normpdf(robotPose(3),deadreck(3),sqrt(0.01));
     wtDR = DRweight*wtDR;
 end
 
 highprob = 1;
-lowprob = 0.00000001;
-beacondistW = sqrt(0.001);
+lowprob = 0.000001;
+beacondistW = sqrt(0.01);
 bclabels = beacondata(1:3:end);
 
 for i=1:m

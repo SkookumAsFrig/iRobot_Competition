@@ -66,9 +66,9 @@ for i=1:n
     if realcost<cost
         path = realpath;
         cost = realcost;
-    else
-        disp(realpath);
-        disp(realcost);
+%     else
+%         disp(realpath);
+%         disp(realcost);
     end
 end
 
