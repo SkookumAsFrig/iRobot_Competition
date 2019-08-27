@@ -66,8 +66,8 @@ dataStore = struct('truthPose', [],...
 
 %% Load Map File Information
 % map
-map = 'compMap.mat';
-% map = 'CompMap2019_walls_only.mat';
+%map = 'compMap.mat';
+map = 'CompMap2019_walls_only.mat';
 mapstruct = importdata(map);
 optionalW = mapstruct.optWalls;
 originalwpsz = size(mapstruct.map,1);
