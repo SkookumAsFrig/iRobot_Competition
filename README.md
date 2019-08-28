@@ -30,3 +30,10 @@ Our team scored 80 points (90 if you count the first beacon, we did not beep for
 Algorithm Design:
 
 ![Alt text](PDFtoJPG.me-1.jpg?raw=true "Title")
+
+Photos courtesy of Beatriz Asfora
+
+![Alt text](CompetitionPictures/DSC_0124.JPG?raw=true "Title")
+![Alt text](CompetitionPictures/DSC_0142.JPG?raw=true "Title")
+![Alt text](CompetitionPictures/DSC_0147.JPG?raw=true "Title")
+![Alt text](CompetitionPictures/DSC_0151.JPG?raw=true "Title")
