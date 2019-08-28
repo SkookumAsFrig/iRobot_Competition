@@ -7,6 +7,8 @@ Replay of Final Competition Results With Localization Results:
 
 The robot is an iRobot Create with an Intel Realsense RGBD camera, and the normal iRobot suite of sensors (odometry, bump, wheel drop).
 
+![Alt text](CompetitionPictures/DSC_0124.JPG?raw=true "Title")
+
 The robot is placed in one of k possible initial positions, with arbitrary orientation. The robot is tasked with:
 - Localizing itself
 - Determining which of the optional walls are actually in the environment and produce an actual map
@@ -33,7 +35,6 @@ Algorithm Design:
 
 Photos courtesy of Beatriz Asfora
 
-![Alt text](CompetitionPictures/DSC_0124.JPG?raw=true "Title")
 ![Alt text](CompetitionPictures/DSC_0142.JPG?raw=true "Title")
 ![Alt text](CompetitionPictures/DSC_0147.JPG?raw=true "Title")
 ![Alt text](CompetitionPictures/DSC_0151.JPG?raw=true "Title")
